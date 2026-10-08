@@ -3,11 +3,5 @@
     "api/gemini.js": {
       "maxDuration": 300
     }
-  },
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/holodeck-optimized.html"
-    }
-  ]
+  }
 }

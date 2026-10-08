@@ -34,8 +34,8 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 **Billing:** the game needs a key with billing set up. Without it Google refuses the Pro story model; the app notices (or tells you when you press **Test connection**) and falls back to the Flash model until billing is on.
 
 ### Running it
-- **Hosted:** rename `holodeck-optimized.html` to `index.html`, push to a GitHub repo, and enable *Settings > Pages* (deploy from the main branch). Share the link; every player brings their own key.
-- **Locally:** from the folder, run `python3 -m http.server 8080` and open `http://localhost:8080/holodeck-optimized.html`. (Opening the file directly works, but browsers then re-ask for microphone permission every time.)
+- **Hosted:** push to a GitHub repo, and enable *Settings > Pages* (deploy from the main branch). Share the link; every player brings their own key.
+- **Locally:** from the folder, run `python3 -m http.server 8080` and open `http://localhost:8080/`. (Opening the file directly works, but browsers then re-ask for microphone permission every time.)
 
 ### Browsers
 | Browser | Typing | Dictation | Save to folder |
@@ -65,7 +65,7 @@ If the game is hosted on Vercel, you can let a few people play on your Gemini ke
 
 ### Adding someone
 
-Open `/?admin` on your site (or `holodeck-optimized.html?admin`) and enter the admin password. Type a name and an allowance (about 10 cents buys a minute of play, so $3 is roughly 30 minutes) and press **Create invite**, then copy the link and send it. The same page shows what each guest has used, and lets you add more, pause, resume or delete an invite.
+Open `/?admin` on your site and enter the admin password. Type a name and an allowance (about 10 cents buys a minute of play, so $3 is roughly 30 minutes) and press **Create invite**, then copy the link and send it. The same page shows what each guest has used, and lets you add more, pause, resume or delete an invite.
 
 To change the Gemini key later, edit `GEMINI_KEY` in Vercel and redeploy. Invites are not affected.
 

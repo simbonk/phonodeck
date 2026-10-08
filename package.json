@@ -2,5 +2,5 @@
   "name": "phonodeck",
   "private": true,
   "type": "module",
-  "description": "The Phonodeck game is the single file holodeck-optimized.html. The api folder is the optional invite server for Vercel; it has no dependencies."
+  "description": "The Phonodeck game is the single file index.html. The api folder is the optional invite server for Vercel; it has no dependencies."
 }
