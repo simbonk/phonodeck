@@ -56,7 +56,7 @@ If the game is hosted on Vercel, you can let a few people play on your Gemini ke
 
 ### One-time setup in Vercel
 
-1. Open the holodeck project in Vercel, go to **Storage**, and add a free **Upstash for Redis** database, connected to this project. It adds the storage variables by itself.
+1. Open the phonodeck project in Vercel, go to **Storage**, and add a free **Upstash for Redis** database, connected to this project. It adds the storage variables by itself.
 2. In **Settings > Environment Variables**, add:
    - `GEMINI_KEY`: your Gemini API key (billing set up).
    - `ADMIN_PASSWORD`: a password for the invites page.
@@ -65,7 +65,7 @@ If the game is hosted on Vercel, you can let a few people play on your Gemini ke
 
 ### Adding someone
 
-Open `holodeck-optimized.html?admin` on your site and enter the admin password. Type a name and an allowance (about 10 cents buys a minute of play, so $3 is roughly 30 minutes) and press **Create invite**, then copy the link and send it. The same page shows what each guest has used, and lets you add more, pause, resume or delete an invite.
+Open `/?admin` on your site (or `holodeck-optimized.html?admin`) and enter the admin password. Type a name and an allowance (about 10 cents buys a minute of play, so $3 is roughly 30 minutes) and press **Create invite**, then copy the link and send it. The same page shows what each guest has used, and lets you add more, pause, resume or delete an invite.
 
 To change the Gemini key later, edit `GEMINI_KEY` in Vercel and redeploy. Invites are not affected.
 
