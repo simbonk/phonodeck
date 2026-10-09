@@ -1358,6 +1358,13 @@ function wavFromPcm(pcm, rate) {   // raw 16-bit mono PCM -> WAV, in case the AP
   h.setUint32(24, rate, true); h.setUint32(28, rate * 2, true); h.setUint16(32, 2, true); h.setUint16(34, 16, true); w(36, 'data'); h.setUint32(40, pcm.length, true);
   return new Blob([h.buffer, pcm], { type: 'audio/wav' });
 }
+// iPhone/iPad: Gemini's voice is 24 kHz, but the phone's speaker runs at 48 kHz, and Safari's own conversion can crackle. Doubling the
+// sample rate here (each new sample halfway between its neighbours) hands Safari audio it can play as is.
+function pcmTo48k(pcm) {
+  const a = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1), b = new Int16Array(a.length * 2);
+  for (let i = 0; i < a.length; i++) { b[2 * i] = a[i]; b[2 * i + 1] = i + 1 < a.length ? (a[i] + a[i + 1]) >> 1 : a[i]; }
+  return new Uint8Array(b.buffer);
+}
 const ttsCache = new Map();   // voice+model+style+text -> audio URL; replaying a message costs nothing while the page stays open
 async function geminiTTS(text) {
   const chosen = (!guest() && S().ttsModel) || GEMINI.ttsModel, voice = (A() && A().ttsVoice) || (!guest() && S().ttsVoice) || DEFAULT_TTS_VOICE, backup = chosen === GEMINI.ttsModel ? GEMINI.ttsBackup : GEMINI.ttsModel, model = ttsBackupNow ? backup : chosen, style = S().ttsStyle || DEFAULT_TTS_STYLE, ck = [voice, model, style, text].join('\u0001');
@@ -1382,7 +1389,8 @@ async function geminiTTS(text) {
   if (!data) throw new Error('Gemini voice returned no audio');
   const bin = atob(data), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   recordUsage('voice', null, false, (bin.startsWith('RIFF') ? bytes.length - 44 : bytes.length) / 48000);   // 24kHz 16-bit mono = 48,000 bytes per second
-  const url = URL.createObjectURL(bin.startsWith('RIFF') ? new Blob([bytes], { type: 'audio/wav' }) : wavFromPcm(bytes, 24000));
+  const riff = bin.startsWith('RIFF'), rate = riff ? new DataView(bytes.buffer).getUint32(24, true) : 24000;
+  const url = URL.createObjectURL(IOS && rate === 24000 ? wavFromPcm(pcmTo48k(riff ? bytes.subarray(44) : bytes), 48000) : riff ? new Blob([bytes], { type: 'audio/wav' }) : wavFromPcm(bytes, 24000));
   ttsCache.set(ck, url);
   if (ttsCache.size > 80) { const k = ttsCache.keys().next().value; URL.revokeObjectURL(ttsCache.get(k)); ttsCache.delete(k); }
   return url;
@@ -1577,7 +1585,7 @@ const clipCache = {};
 function renderClip(key, secs, build, loop) {   // -> Promise of a WAV object URL; a loop gets its end cross-faded into its start, so it repeats seamlessly
   if (clipCache[key]) return clipCache[key];
   const OC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OC) return Promise.reject(new Error('No offline audio here'));
-  const rate = 24000, pre = loop ? 3 : 0, c = new OC(1, Math.ceil(rate * (secs + pre)), rate); build(c);
+  const rate = 48000, pre = loop ? 3 : 0, c = new OC(1, Math.ceil(rate * (secs + pre)), rate); build(c);
   return clipCache[key] = new Promise((res, rej) => { c.oncomplete = e => res(e.renderedBuffer); const p = c.startRendering(); if (p && p.then) p.then(res, rej); }).then(b => {
     let d = b.getChannelData(0);
     if (loop) { const st = pre * rate, f = rate, out = d.slice(st); for (let i = 0; i < f; i++) { const t = i / f, j = out.length - f + i; out[j] = out[j] * (1 - t) + d[st - f + i] * t; } d = out; }
