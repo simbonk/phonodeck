@@ -168,7 +168,7 @@ function notice(t) {   // a system line in the story; held until the story is on
 }
 function goFree(model) {
   if (S().freeTier) return;
-  db.settings.freeTier = true; persist(); keyStatus();
+  db.settings.freeTier = true; persist(); keyStatus(); freeGate();   // the warning blocks until they pick a new key or continue anyway
   notice('Your API key has no billing set up, so Google refuses "' + model + '" and the story now uses "' + cheapModel() + '" instead. Set up billing for your key\'s Google project, then press Test connection in Settings > Connection.');
 }
 // Runs a request; on a free-tier refusal of the story model, switches to the cheap model; on a short rate limit, waits once and retries.
@@ -185,7 +185,7 @@ async function probeTier() {   // one tiny request to the story model; returns a
   const model = S().model || GEMINI.model;
   try {
     const r = await llmFetch(model, [{ role: 'user', content: 'Reply with the single word OK.' }], {});
-    if (r.ok) { if (S().freeTier) { delete db.settings.freeTier; persist(); keyStatus(); } return 'Your key can use the story model "' + model + '".'; }
+    if (r.ok) { if (S().freeTier) { delete db.settings.freeTier; delete db.settings.freeOk; persist(); keyStatus(); } return 'Your key can use the story model "' + model + '".'; }
     const body = await r.text();
     if (r.status === 429 && isTierRefusal(body)) { goFree(model); return 'This key has no billing set up: "' + model + '" is refused, so the story will use "' + cheapModel() + '" until you set up billing.'; }
     return 'The story model "' + model + '" answered HTTP ' + r.status + '.';
