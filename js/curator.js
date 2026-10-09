@@ -15,8 +15,8 @@ const QUESTIONS = [
   { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
     ck: ['Explore every corner', 'Make friends with the animals', 'Build something amazing', 'Find all the secret places', 'Have a feast', 'Learn some magic'], ph: 'e.g. Spend an evening in Ten Forward swapping stories with Guinan' },
   { id: 'world', q: 'What kind of world do you want to step into?', h: 'Pick an era or a world you find fascinating. The more specific the time and place, the richer the story.', ph: 'Or name your own, e.g. Ancient Rome in 44 BC, or Tokyo in 2077',
-    c: ['The American Civil War, 1863', 'Star Trek: The Next Generation', 'France during World War II', 'Los Angeles in the 1920s', 'Miami in 1985', 'Victorian London in the 1880s', 'Pirates of the Caribbean, 1715', 'Surprise me'],
-    ck: ['Dragons and castles', 'Space adventure', 'Magic school', 'Pirate treasure hunt', 'Dinosaur island', 'Superheroes', 'Underwater kingdom', 'Talking animals', 'A friendly haunted house', 'Jungle explorer', 'Toys come alive', 'Surprise me'] },
+    c: ['The American Civil War, 1863', 'Star Trek: The Next Generation', 'France during World War II', 'Los Angeles in the 1920s', 'Miami in 1985', 'Victorian London in the 1880s', 'Pirates of the Caribbean, 1715'],
+    ck: ['Dragons and castles', 'Space adventure', 'Magic school', 'Pirate treasure hunt', 'Dinosaur island', 'Superheroes', 'Underwater kingdom', 'Talking animals', 'A friendly haunted house', 'Jungle explorer', 'Toys come alive'] },
   { id: 'vibe', q: 'What vibe should it have?', h: 'Pick a mood; more than one is fine.', c: ['Gritty', 'Whimsical', 'Epic', 'Cozy', 'Tense', 'Funny', 'Melancholic', 'Romantic', 'Mysterious', 'Wholesome'],
     ck: ['Funny', 'Exciting', 'Magical', 'Cozy', 'Silly', 'Mysterious (not too scary)', 'Brave', 'Wholesome'] },
   { id: 'who', q: 'Who are you in this story?', h: 'Name, role, background. A sentence is enough.', c: ['A weary detective', 'A rookie adventurer', 'A smuggler', 'A scholar', 'A soldier turned outcast', 'A stranger with amnesia'],
@@ -85,7 +85,7 @@ const WHO2_Q = { id: 'who', q: 'Who are you this time?', h: 'Keep your character
 const STORY_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid'], SIM_IDS = ['world', 'where', 'goal', 'who', 'allies', 'avoid'];
 const simPick = () => /simulat/i.test(cur.answers.mode || '');
 const shortPick = () => !!cur.answers.time && !isNoPref(cur.answers.time) && minutesOf(cur.answers.time) <= 15;   // a short session was chosen
-const buildPick = () => cur.answers.pick === 'build';   // "build the world myself" (otherwise a curated experience, or "surprise me")
+const buildPick = () => cur.answers.pick === 'build';   // "build the world myself" (otherwise a curated experience)
 const ageNow = () => +cur.answers.age || 0, kidPick = () => ageNow() > 0 && ageNow() < 13, minorPick = () => ageNow() > 0 && ageNow() < 18;
 // children get their own chips; short stories get the grounded ones; under-18s never see romance options
 const chipsOf = q => (q.ck && kidPick() ? q.ck : q.cs && shortPick() ? q.cs : q.c).filter(c => !(minorPick() && /roman[ct]|love/i.test(c)));
@@ -170,7 +170,7 @@ function curRender() {
   $('curQ').textContent = q.q; $('curHint').textContent = q.h + (cur.fromPhoto && cur.fromPhoto.includes(q.id) ? ' (Filled in from your photo: change anything you like.)' : '');
   $('curPhoto').style.display = q.photo ? '' : 'none'; showPhoto();
   const picked = q.pick && !!cur.preset;
-  $('curMe').style.display = q.me ? '' : 'none'; $('curPick').style.display = q.pick ? '' : 'none'; $('curSkip').style.display = q.me || q.rom || q.voice ? 'none' : '';
+  $('curMe').style.display = q.me ? '' : 'none'; $('curPick').style.display = q.pick ? '' : 'none';
   $('curVoice').style.display = q.voice ? '' : 'none'; if (q.voice) voiceRender();
   $('curRom').style.display = q.rom ? '' : 'none';
   if (q.rom) { const me = S().me || {}, a = cur.answers; $('romGender').value = a.romGender !== undefined ? a.romGender : a.gender || me.gender || ''; $('romInterest').value = a.romInterest !== undefined ? a.romInterest : me.interest || ''; $('romNone').checked = !!a.romNone; }
@@ -233,7 +233,6 @@ function curStore() {
 }
 function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age, x.gender && 'gender ' + x.gender].filter(Boolean).join('; ') || '(not given)'; }
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
-$('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.pick) { presetDrop(); cur.answers.pick = 'surprise'; cur.answers.describe = NOPREF; curAdvance(); return; } if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
 $('curNext').onclick = async () => {
   curStore(); const q = curQs()[cur.i];
   if (q.photo && cur.photo && !cur.photo.canvas && !(await readPhoto())) return;   // the photo is studied once, when you leave this step
