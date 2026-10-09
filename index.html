@@ -39,6 +39,7 @@
   body.guest .hostOnly{display:none!important} .guestOnly{display:none} body.guest .guestOnly{display:block}
   .adm{width:100%;border-collapse:collapse;font-size:13px} .adm td,.adm th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top} .adm button{padding:3px 8px;margin:1px}
   .box{max-width:640px;margin:0 auto}
+  .why{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:10px 0}.why summary{cursor:pointer;color:var(--accent)}.why p,.why li{font-size:15px}
   .box h1{color:var(--accent);letter-spacing:.12em;margin:10px 0 4px}
   .big{display:block;width:100%;text-align:left;padding:16px;margin:12px 0;font-size:18px}
   .big small{display:block;color:var(--dim);font-size:14px}.big.primary small{color:#023;opacity:.8}
@@ -278,11 +279,21 @@
 <!-- FIRST-RUN WELCOME -->
 <div id="welcome" class="overlay"><div class="box">
   <h1>WELCOME TO THE PHONODECK</h1>
+  <div class="whyBox"></div>
   <p>An AI Game Master runs a story made just for you. Answer a few quick questions (how much time you have, the feeling you want, your name and age, then either a quick description or a deeper set-up with a photo), then play by typing or talking. It remembers everything, keeps an eye on the clock, lands a real ending and grades the result.</p>
   <h3>SET UP IN ABOUT A MINUTE</h3>
   <ol><li>Get a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> and set up billing for it (a small prepaid balance works).</li><li>Paste it below.</li><li>Press Start.</li></ol>
   <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
   <p class="warn">Your key is stored only in this browser and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer.</p>
+  <h3>BEFORE YOU START</h3>
+  <ol>
+    <li><b>Use Chrome, Edge or Safari.</b> Firefox can't turn speech into text, so hands-free talking won't work there.</li>
+    <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
+    <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works: tap <b>&#127911; Hands-free</b> next to Send, talk, and say <b>"make it so"</b> to send.</li>
+  </ol>
+  <p class="warn" id="wNoVoice" style="display:none"><b>This browser can't listen.</b> Hands-free talking needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>: Firefox can't turn speech into text. The phonodeck is at its best when you talk to it, so please open this page in one of those browsers. You can still type if you prefer.</p>
+  <button class="big" id="wMic">Test the microphone<small>Allow it, then say something like "Hello, phonodeck"</small></button>
+  <p class="tag" id="wMicStatus"></p>
   <button class="big primary" id="wStart">Save key and start<small>Opens the quick questions</small></button>
   <button class="big" id="wDemo">Try the offline demo<small>No key needed. A fake Game Master so you can look around (turn it off in Settings &gt; Connection).</small></button>
   <button id="wSkip">Skip for now</button>
@@ -292,9 +303,11 @@
 <div id="guestWelcome" class="overlay"><div class="box">
   <h1>WELCOME TO THE PHONODECK</h1>
   <p id="gwHello">You have been invited to play.</p>
+  <div class="whyBox"></div>
   <p>An AI Game Master tells a story made just for you, and you answer by talking or typing. There is nothing to set up.</p>
   <h3>BEFORE YOU START</h3>
   <ol>
+    <li><b>Use Chrome, Edge or Safari.</b> Firefox can't turn speech into text, so hands-free talking won't work there.</li>
     <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
     <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
     <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works.</li>
@@ -2596,30 +2609,45 @@ function guestWelcomeText() {
   if (i.name) $('gwHello').textContent = 'Hi ' + i.name + ', you have been invited to play.';
   $('gwLeft').textContent = i.status !== 'active' ? INVITE_OFF_MSG : i.minutesLeft > 0 ? 'Your invite has about ' + i.minutesLeft + ' minutes of play.' : QUOTA_MSG;
 }
-function guestVoiceCheck() {   // hands-free needs the browser's speech recognition (Firefox has none): say so before they get going
-  const ok = !!SR; $('gwNoVoice').style.display = ok ? 'none' : ''; $('gwMic').style.display = ok ? '' : 'none';
-  $('gwStart').classList.toggle('primary', ok); $('gwStart').firstChild.textContent = ok ? 'Start' : 'Continue by typing';
+// The "Why" on both welcome screens, in Simon's own words.
+const WHY_HTML = '<details class="why"><summary>Why</summary>' +
+  '<p>Anxious about the future, so I built the one I want to see.</p>' +
+  '<p>I leaned in with Claude Code to build a proto holodeck. LLMs can arguably pass the Turing test now, so I figured why not push them to tell a good story? ' +
+  'I think before we get crazy into graphics, we should focus on the elements that make a good story.</p>' +
+  '<p>Cue <b>The Phonodeck</b>: a text-to-speech lucid dream.</p><ul>' +
+  '<li><b>It\'s totally open source!</b> Feel free to <a href="https://github.com/simbonk/phonodeck" target="_blank" rel="noopener" style="color:var(--accent)">peek under the covers</a>. It\'s basically a bunch of LLMs strung together with the Gemini API to narrate a story, with director and game master models that hover in the background and try to hook you.</li>' +
+  '<li><b>Your data stays with you.</b> Everything lives locally in your browser, RAG style. As the story balloons, it keeps you in the bubble without getting bogged down in context. I\'m not scraping any data: that\'s not the goal.</li>' +
+  '<li><b>Hands-free mode!</b> Close your eyes, talk, and say "make it so" to send your thoughts. When I chat by voice elsewhere it cuts my thoughts off, and this works much better.</li></ul>' +
+  '<p>This runs pretty hot (probably a bit ahead of its time commercially, and it could definitely use more eyeballs to help optimize). I\'m up for ideas, and curious to see where this craziness goes. My North Star is Star Trek: The Next Generation, so I\'ll lean that way.</p>' +
+  '<p>Second star to the right, and straight on till morning!</p></details>';
+document.querySelectorAll('.whyBox').forEach(el => el.innerHTML = WHY_HTML);
+
+// Both welcome screens (w: first run, gw: invited guest) let you test the microphone before you start.
+const MIC_UI = { w: { where: 'this page' }, gw: { where: 'the invite link you were sent', start: 'gwStart', go: 'Start' } };
+function voiceCheck(p) {   // hands-free needs the browser's speech recognition (Firefox has none): say so before they get going
+  const ok = !!SR, u = MIC_UI[p]; $(p + 'NoVoice').style.display = ok ? 'none' : ''; $(p + 'Mic').style.display = ok ? '' : 'none';
+  if (u.start) { $(u.start).classList.toggle('primary', ok); $(u.start).firstChild.textContent = ok ? u.go : 'Continue by typing'; }
 }
 // Allowing the microphone is not enough: some browsers have speech recognition that never returns words (Firefox, Brave, some Linux builds),
 // so listen for a few seconds and show what was heard.
-const VOICE_FAIL = 'This browser could not turn your speech into words. Hands-free needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>, so please open the invite link you were sent in one of those. You can still type here if you prefer.';
-function gwVoiceFailed(why) {
-  $('gwMicStatus').textContent = why || '';
-  $('gwNoVoice').innerHTML = VOICE_FAIL; $('gwNoVoice').style.display = '';
-  $('gwStart').classList.remove('primary'); $('gwStart').firstChild.textContent = 'Continue by typing';
+const VOICE_FAIL = where => 'This browser could not turn your speech into words. Hands-free needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>, so please open ' + where + ' in one of those. You can still type here if you prefer.';
+function voiceFailed(p, why) {
+  const u = MIC_UI[p]; $(p + 'MicStatus').textContent = why || '';
+  $(p + 'NoVoice').innerHTML = VOICE_FAIL(u.where); $(p + 'NoVoice').style.display = '';
+  if (u.start) { $(u.start).classList.remove('primary'); $(u.start).firstChild.textContent = 'Continue by typing'; }
 }
-$('gwMic').onclick = async () => {
-  const st = $('gwMicStatus'), btn = $('gwMic');
-  if (!SR) return gwVoiceFailed();
+async function micTest(p) {
+  const st = $(p + 'MicStatus'), btn = $(p + 'Mic');
+  if (!SR) return voiceFailed(p);
   try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); m.getTracks().forEach(t => t.stop()); }
   catch (e) { st.textContent = 'The microphone was not allowed (' + e.name + '). Allow it in your browser\'s settings for this site (the icon left of the address), then test again. You can still type.'; return; }
-  let r; try { r = new SR(); } catch (e) { return gwVoiceFailed(); }
+  let r; try { r = new SR(); } catch (e) { return voiceFailed(p); }
   r.lang = navigator.language || 'en-US'; r.interimResults = true; r.continuous = false;
   let heard = '', failed = '', done = false;
   const finish = () => { if (done) return; done = true; clearTimeout(timer); try { r.abort(); } catch (e) {} btn.disabled = false; btn.firstChild.textContent = 'Test again';
-    if (heard) { st.innerHTML = 'Heard: <b>"' + esc(heard) + '"</b>. Hands-free works, you are all set.'; $('gwNoVoice').style.display = 'none'; guestVoiceCheck(); }
+    if (heard) { st.innerHTML = 'Heard: <b>"' + esc(heard) + '"</b>. Hands-free works, you are all set.'; voiceCheck(p); }
     else if (failed === 'no-speech' || !failed) st.textContent = 'I did not hear anything. Check the microphone is not muted, then test again and speak up.';
-    else if (failed === 'not-allowed' || failed === 'service-not-allowed' || failed === 'network' || failed === 'language-not-supported') gwVoiceFailed('Speech-to-text did not work here (' + failed + ').');
+    else if (failed === 'not-allowed' || failed === 'service-not-allowed' || failed === 'network' || failed === 'language-not-supported') voiceFailed(p, 'Speech-to-text did not work here (' + failed + ').');
     else st.textContent = 'The test did not finish (' + failed + '). Try again.'; };
   r.onresult = e => { heard = [...e.results].map(x => x[0].transcript).join(' ').trim(); st.innerHTML = 'Hearing: <i>' + esc(heard) + '</i>'; };
   r.onerror = e => { failed = e.error || 'error'; };
@@ -2628,7 +2656,9 @@ $('gwMic').onclick = async () => {
   btn.disabled = true; btn.firstChild.textContent = 'Listening... say something';
   st.textContent = 'Listening. Say "Hello, phonodeck".';
   try { r.start(); } catch (e) { failed = 'start'; finish(); }
-};
+}
+$('wMic').onclick = () => micTest('w');
+$('gwMic').onclick = () => micTest('gw');
 $('gwStart').onclick = () => {
   db.settings.guestWelcomed = db.settings.welcomed = true; db.settings.speak = true; persist();
   $('guestWelcome').classList.remove('on');
@@ -2684,8 +2714,8 @@ $('admClose').onclick = () => { $('admin').classList.remove('on'); history.repla
 if (!db.adventures[db.current]) db.current = '';
 loadSettings(); persist(); refresh(); renderStart(); initDir(); initVoices();
 document.body.classList.toggle('guest', guest());
-if (guest()) { if (!S().guestWelcomed) { $('guestWelcome').classList.add('on'); guestVoiceCheck(); } loadInvite(); }
-else if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) $('welcome').classList.add('on');
+if (guest()) { if (!S().guestWelcomed) { $('guestWelcome').classList.add('on'); voiceCheck('gw'); } loadInvite(); }
+else if (!S().key && !S().fake && !S().welcomed && !Object.keys(db.adventures).length) { $('welcome').classList.add('on'); voiceCheck('w'); }
 if (new URLSearchParams(location.search).has('admin')) { $('admin').classList.add('on'); if (admPw) admRun('list'); }
 keyStatus();
 (function storageCheck() {
