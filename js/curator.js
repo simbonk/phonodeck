@@ -207,14 +207,14 @@ $('pickBuild').onclick = () => { presetDrop(); cur.answers.pick = 'build'; curAd
 // ---------------- Narrator voice step ----------------
 function voiceRender() {
   const now = cur.answers.voice || S().ttsVoice || DEFAULT_TTS_VOICE, col = g => '<div><div class="tag" style="margin-bottom:6px">' + (g === 'f' ? 'WOMEN' : 'MEN') + '</div>' +
-    NARRATORS.filter(n => n.g === g).map(n => '<button class="vc' + (n.v === now ? ' sel' : '') + '" data-v="' + n.v + '" style="width:100%;margin-bottom:8px">&#9654; ' + n.v + '<small>' + esc(n.d) + '</small></button>').join('') + '</div>';
+    NARRATORS.filter(n => n.g === g).map(n => '<button class="vc' + (n.v === now ? ' sel' : '') + '" data-v="' + n.v + '" style="width:100%;margin-bottom:8px">&#9654; ' + voiceName(n.v) + '<small>' + esc(n.d) + '</small></button>').join('') + '</div>';
   $('curVoice').innerHTML = col('f') + col('m');
   if (!cur.answers.voice) cur.answers.voice = NARRATORS.some(n => n.v === now) ? now : DEFAULT_TTS_VOICE;
 }
 $('curVoice').addEventListener('click', async e => {
   const b = e.target.closest('[data-v]'); if (!b) return;
   cur.answers.voice = b.dataset.v; voiceRender(); stopSpeech();
-  $('curMsg').textContent = 'Fetching a sample of ' + b.dataset.v + '...';
+  $('curMsg').textContent = 'Fetching a sample of ' + voiceName(b.dataset.v) + '...';
   try { const url = await geminiTTS(NARRATOR_LINE, b.dataset.v); if (cur.answers.voice !== b.dataset.v) return; player.onended = null; player.onerror = null; player.src = url; await player.play(); $('curMsg').textContent = ''; }
   catch (err) { $('curMsg').textContent = err.name === 'NotAllowedError' ? 'Tap the voice again to hear it.' : 'Could not play a sample (' + String(err.message).slice(0, 120) + '). You can still pick this voice.'; }
 });
