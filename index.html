@@ -144,8 +144,7 @@
           <label>Last name (so characters can say "Captain Chiu" or "Ms. Rivera" when that fits)</label>
           <div class="row"><input id="setMeLast" placeholder="e.g. Chiu" autocomplete="off"></div>
           <label>Gender</label>
-          <div class="row"><input id="setMeGender" list="meGenders" placeholder="In your own words, e.g. male" autocomplete="off"></div>
-          <datalist id="meGenders"><option value="Male"><option value="Female"></datalist>
+          <div class="row"><input id="setMeGender" placeholder="In your own words, e.g. male" autocomplete="off"></div>
           <label>Interested in (romance)</label>
           <div class="row"><input id="setMeInterest" list="meInterests" placeholder="In your own words, e.g. women" autocomplete="off"></div>
           <datalist id="meInterests"><option value="Women"><option value="Men"><option value="Everyone"></datalist>
@@ -290,10 +289,10 @@
   <div id="curMe" style="display:none;margin:12px 0">
     <div class="tag">First and last name</div><div class="row"><input id="meName" placeholder="First name" autocomplete="off" style="flex:1"> <input id="meLast" placeholder="Last name" autocomplete="off" style="flex:1"></div>
     <div class="tag">Your age</div><div class="row"><input id="meAge" type="number" min="3" max="120" placeholder="e.g. 10, 35 or 70"></div>
-    <div class="tag">Your gender</div><div class="row"><input id="meGender" list="meGenders" placeholder="In your own words, e.g. a woman" autocomplete="off"></div>
+    <div class="tag">Your gender</div><div class="row"><input id="meGender" placeholder="In your own words, e.g. a woman" autocomplete="off"></div>
   </div>
   <div id="curRom" style="display:none;margin:12px 0">
-    <div class="tag">You are</div><div class="row"><input id="romGender" list="meGenders" placeholder="In your own words, e.g. a man" autocomplete="off"></div>
+    <div class="tag">You are</div><div class="row"><input id="romGender" placeholder="In your own words, e.g. a man" autocomplete="off"></div>
     <div class="tag">Interested in</div><div class="row"><input id="romInterest" list="meInterests" placeholder="In your own words, e.g. women" autocomplete="off"></div>
     <label><input type="checkbox" id="romNone" style="width:auto"> No romance this time</label>
   </div>
