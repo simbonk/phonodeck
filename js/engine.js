@@ -110,7 +110,7 @@ async function takeTurn(input, hidden, onDelta) {
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
     '\n\n## HOW EACH TURN ARRIVES\nThe latest message starts with a private GAME MASTER BRIEFING for this reply only (mission map, recalled memories, director notes, player changes), then the player\'s action. Follow the briefing, never mention or quote it, and reply to the action.';
-  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
+  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a, !hidden && isQuestion(input)) +
     (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '') +
     '\n[END OF BRIEFING]\n\n' + (hidden ? 'INSTRUCTION: ' : 'THE PLAYER: ') + input;
   const messages = [{ role: 'system', content: system }];
@@ -304,7 +304,10 @@ function humourFor(f) {   // { p: chance a reply is asked for humour, kinds: whi
   return { p: 0.6, kinds: HUMOR };
 }
 const DISRUPT = ['complication', 'clock', 'world', 'seed', 'choice', 'npc'];   // the moves that pull the player back toward plot; benched while the feeling is landing
-function directorNotes(a) {
+// A question ("What is a Rialto workshop?", "who is she?") gets an answer and nothing else: no new plot is piled on while the player is
+// still trying to understand the scene. Speech-to-text often drops the question mark, so a question word at the start counts too.
+const isQuestion = t => /\?["'”)*\s]*$/.test(t) || /^\s*(what|who|whose|where|when|why|how|which|is|are|was|were|do|does|did|can|could|would|will)\b/i.test(t);
+function directorNotes(a, asking) {
   const turn = playerTurns(a) + 1, short = isShort(a), sim = isSim(a), left = a.left, final = left === 0, wrap = left != null && left <= 3;
   const m = a.mood || {}, happy = m.feeling >= 7 || !!m.hooked_on, roaming = !sim && (m.meandering || m.leaving_plot), calm = sim || happy || roaming;
   // Pacing: a calm phase ("savour") while the player is happy, roaming or in the simulator. Otherwise timed stories follow the clock
@@ -316,7 +319,7 @@ function directorNotes(a) {
   const weights = { rising: { seed: 2, npc: 2, world: 2, sensory: 1.5, banter: 2, texture: 2, clock: 1.5, payoff: 1.5 }, peak: { complication: 3, choice: 2, wonder: 1, clock: 2.5, payoff: 2.5, banter: 1.5 },
     release: { quiet: 2, heart: 2, wonder: 1.5, sensory: 1, banter: 2.5, texture: 1.5, payoff: 2 }, savour: { sensory: 2.5, wonder: 2, heart: 2.5, quiet: 2, texture: 1.5, banter: 1.5, payoff: 1.5 } }[phase];
   a.dir = a.dir || {};
-  const pool = Object.keys(DIRECTOR).filter(k => (!short || SHORT_NUDGES.includes(k)) && !((calm || wrap) && DISRUPT.includes(k)) && turn - (a.dir[k] || -99) >= 3).map(k => [k, weights[k] || 1]);
+  const pool = Object.keys(DIRECTOR).filter(k => (!short || SHORT_NUDGES.includes(k)) && !((calm || wrap) && DISRUPT.includes(k)) && !(asking && DISRUPT.concat('payoff').includes(k)) && turn - (a.dir[k] || -99) >= 3).map(k => [k, weights[k] || 1]);
   const picked = [];
   for (let n = 0; n < (short || final ? 1 : 2) && pool.length; n++) {
     let r = Math.random() * pool.reduce((s, p) => s + p[1], 0), i = 0;
@@ -324,13 +327,14 @@ function directorNotes(a) {
     picked.push(pool[i][0]); a.dir[pool[i][0]] = turn; pool.splice(i, 1);
   }
   const f = feelingOf(a), lines = ['FEELING TO ACHIEVE: ' + f + '. Make this reply deliver it.' + (m.feeling != null && m.t ? ' Last reading: ' + m.feeling + '/10' + (m.feeling < 5 ? ', so lean into it harder and drop whatever is getting in the way.' : '.') : '')];
+  if (asking) lines.push('THE PLAYER ASKED A QUESTION (this wins over the notes below): answer it clearly and plainly first, with what their character would know. That answer is the reply: nothing new happens, nobody arrives, no new clue or complication. Keep it short and hand the moment back to the player.');
   if (happy) lines.push('KEEP A GOOD THING GOING: the player is enjoying this' + (m.hooked_on ? ' (' + m.hooked_on + ')' : '') + '. Scrub plot points for now: no new complications, no interruptions, no other characters barging in, nothing following them. Deepen what is working.');
   if (roaming) lines.push((m.leaving_plot ? 'The player is leaving the plot behind. Let it go: it does not chase them, follow them or catch up with them. ' : 'The player is happily meandering. ') + 'Make wherever they are now worth being in; the plot can wait (or stay behind for good).');
   lines.push('PACING: ' + { rising: 'momentum is building; keep things moving and curious.', peak: 'this is a high-intensity beat; make it count and force a decisive moment.', release: 'aftermath and breathing room; let consequences land, then open a fresh hook.', savour: 'stay in the moment and let it breathe; no new problems, just more of what the player came for.' }[phase]);
   picked.forEach(k => lines.push(DIRECTOR[k]));
   const old = Object.values(a.lore).filter(e => turn - (e.lastSeen ? Math.ceil(e.lastSeen / 2) : 0) > 8);
-  if (!short && !calm && old.length && Math.random() < 0.3) { const e = old[Math.floor(Math.random() * old.length)]; lines.push('Callback: bring back "' + e.name + '" (' + (e.desc || e.type) + ') in a natural, meaningful way.'); }
-  if (!sim && !calm && a.playCats && a.playCats.length && Math.random() < (short ? 0.4 : 0.6)) lines.push('Gameplay focus for this reply: ' + a.playCats[Math.floor(Math.random() * a.playCats.length)] + '. Shape the main challenge or interaction around it, organically and without naming the category.');
+  if (!short && !calm && !asking && old.length && Math.random() < 0.3) { const e = old[Math.floor(Math.random() * old.length)]; lines.push('Callback: bring back "' + e.name + '" (' + (e.desc || e.type) + ') in a natural, meaningful way.'); }
+  if (!sim && !calm && !asking && a.playCats && a.playCats.length && Math.random() < (short ? 0.4 : 0.6)) lines.push('Gameplay focus for this reply: ' + a.playCats[Math.floor(Math.random() * a.playCats.length)] + '. Shape the main challenge or interaction around it, organically and without naming the category.');
   if (sim) lines.push("PLAYER'S GOAL: " + (goalOf(a) || '(open: follow their lead)') + '. Help them toward it in this reply, at their pace.');
   else if (a.roadmap && a.roadmap.length) {
     const at = timed(a) ? playedSecs(a) / 60 : turn, act = a.roadmap.find(r => at >= r.from && at <= r.to) || a.roadmap.find(r => at < r.to) || a.roadmap[a.roadmap.length - 1];
@@ -341,13 +345,13 @@ function directorNotes(a) {
   if (final) lines.push('THIS IS THE FINAL REPLY. Bring the ' + (sim ? 'experience' : 'story') + ' to a definitive, storybook ending that lands the feeling (' + f + ')' + (sim ? ' and lets the player savour what they did' : ', paying off the threads the player actually cared about') + (roaming || happy ? '. The player has been off the plot or happy where they are: end THEIR story, not the roadmap\'s' : '') + '. Do not ask what they do next and do not offer a new hook; end on a closing image.');
   else if (left === 1) lines.push('One reply left after this: start bringing it home. Set up a satisfying payoff for where the player actually is and what they care about.');
   else if (wrap) lines.push('WRAP-UP: the session is nearly over. Start steering toward a payoff and a storybook ending, focused on the feeling. No new threads. If the player wants to meander, let the ending come to them rather than killing the moment with plot.');
-  if (!final) { const ends = calm ? ENDINGS.filter(e => !/interruption|reveal|hook/i.test(e)) : ENDINGS; lines.push(ends[Math.floor(Math.random() * ends.length)]); }
+  if (!final) { const ends = calm || asking ? ENDINGS.filter(e => !/interruption|reveal|hook/i.test(e)) : ENDINGS; lines.push(ends[Math.floor(Math.random() * ends.length)]); }
   // Humour follows the feeling: how often it is asked for, and which kinds, depend on what the player wants to feel.
   const hum = humourFor(f);
   if (!final && Math.random() < hum.p * (happy ? 0.6 : 1)) lines.push('Humour this reply: ' + hum.kinds[Math.floor(Math.random() * hum.kinds.length)] + '. Land it in the specifics of this scene and keep it ' + (hum.p < 0.5 ? 'light and warm' : 'sharp') + '; it must serve the feeling, never derail the scene.');
   else lines.push('No jokes needed this reply unless one arises naturally from a character; let the feeling carry it.');
   const cast = (a.gm && a.gm.cast) || [];
-  if (!short && !calm && !wrap && cast.length && Math.random() < 0.75) { const c = cast[Math.floor(Math.random() * cast.length)]; lines.push('Motive in action: ' + c.name + ' wants ' + c.wants + ' and fears ' + c.fears + '. Show them pursuing it visibly in this reply (a choice, a lie, a favour, a closed door), even where it cuts against what the player wants.'); }
+  if (!short && !calm && !wrap && !asking && cast.length && Math.random() < 0.75) { const c = cast[Math.floor(Math.random() * cast.length)]; lines.push('Motive in action: ' + c.name + ' wants ' + c.wants + ' and fears ' + c.fears + '. Show them pursuing it visibly in this reply (a choice, a lie, a favour, a closed door), even where it cuts against what the player wants.'); }
   const rep = repetitionNote(a); if (rep) lines.push(rep);
   return lines.map(l => '- ' + l).join('\n');
 }
