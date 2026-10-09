@@ -33,7 +33,7 @@ A no-build, AI-run text adventure powered by Google Gemini. Say how much time yo
 
 No key yet? Choose **Try the offline demo** to look around with a fake Game Master.
 
-**Billing:** the game needs a key with billing set up. Without it Google refuses the Pro story model; the app notices (or tells you when you press **Test connection**) and falls back to the Flash model until billing is on.
+**Billing:** the game needs a key with billing set up. Without it Google refuses the Pro story model; the app checks the key when you first enter it (and on **Test connection**), and a free key gets a full-screen warning that blocks play until you paste a key with billing or choose to continue anyway on the Flash model.
 
 ### Running it
 - **Hosted:** push to a GitHub repo, and enable *Settings > Pages* (deploy from the main branch). Share the link; every player brings their own key.

@@ -20,7 +20,7 @@ function renderStart() {
     delete db.adventures[n]; if (db.current === n) db.current = ''; persist(n); renderStart(); refresh();
   });
 }
-$('newExpBtn').onclick = () => { cur = newCur(); $('start').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender(); };
+$('newExpBtn').onclick = async () => { if (!await freeGate()) return; cur = newCur(); $('start').classList.remove('on'); $('curator').classList.add('on'); $('curNext').disabled = false; curRender(); };
 $('contBtn').onclick = () => { $('contList').style.display = $('contList').style.display === 'none' ? '' : 'none'; };
 $('menuBtn').onclick = () => { renderStart(); $('start').classList.add('on'); };
 $('closeStart').onclick = () => $('start').classList.remove('on');
@@ -277,7 +277,7 @@ function keyStatus() {
 }
 function autoSave() {
   const old = db.settings, next = Object.assign({}, old, collectSettings());   // merged, so settings that are not on the form (like the browser voice) survive
-  if (!(old.freeTier && old.key === next.key && (old.model || GEMINI.model) === next.model)) delete next.freeTier;   // a new key or story model gets re-checked
+  if (!(old.freeTier && old.key === next.key && (old.model || GEMINI.model) === next.model)) { delete next.freeTier; delete next.freeOk; }   // a new key or story model gets re-checked
   db.settings = next; persist(); keyStatus(); document.body.classList.toggle('guest', guest()); showUsage();
 }
 $('saveSet').onclick = () => { autoSave(); alert('Settings saved.'); };
@@ -301,12 +301,35 @@ $('testConn').onclick = async () => {
     });
     if (swapped.length) autoSave();
     st.textContent = 'Key works. ' + ids.length + ' models found; the model pickers above now list the ones available to you.' + (swapped.length ? ' Switched to available models: ' + swapped.join(', ') + '.' : '') + ' ' + await probeTier();
+    freeGate();
   } catch (e) { st.textContent = 'Failed: ' + e.message; }
 };
 function closeWelcome() { db.settings.welcomed = true; persist(); $('welcome').classList.remove('on'); }
-$('wStart').onclick = () => {
+// ---------------- Key without billing: warn, and block until they choose ----------------
+// A free key cannot use the Pro story model (see probeTier), which ruins the experience, so a full-screen warning stops play
+// until they paste a different key or choose to continue anyway (remembered as settings.freeOk until the key changes). Guests never see it.
+let freeWait = null;
+function freeGate() {   // resolves true to carry on, false to go fix the key
+  if (guest() || !S().freeTier || S().freeOk) return Promise.resolve(true);
+  if (freeWait) return freeWait;
+  $('freeWarn').classList.add('on');
+  return freeWait = new Promise(res => {
+    const done = ok => { $('freeWarn').classList.remove('on'); freeWait = null; res(ok); };
+    $('fwGo').onclick = () => { db.settings.freeOk = true; persist(); done(true); };
+    $('fwKey').onclick = () => {
+      done(false);
+      if ($('welcome').classList.contains('on')) { $('wKey').value = ''; $('wKey').focus(); return; }
+      $('curator').classList.remove('on'); $('start').classList.remove('on'); showTab('settings'); showSub('conn'); $('setKey').focus(); $('setKey').select();
+    };
+  });
+}
+$('wStart').onclick = async () => {
   const k = $('wKey').value.trim(); if (!k) { alert('Paste your API key first, or choose the offline demo.'); return; }
-  $('setKey').value = k; autoSave(); closeWelcome(); probeTier(); $('newExpBtn').click();   // the tier check runs while you answer the questions
+  $('setKey').value = k; autoSave();
+  const b = $('wStart'), label = b.innerHTML; b.disabled = true; b.innerHTML = 'Checking your key...<small>One quick request to Google</small>';
+  await probeTier(); b.disabled = false; b.innerHTML = label;
+  if (!await freeGate()) return;   // a free key: they chose to paste a different one
+  closeWelcome(); $('newExpBtn').click();
 };
 $('wDemo').onclick = () => { $('setFake').checked = true; autoSave(); closeWelcome(); $('newExpBtn').click(); };
 $('wSkip').onclick = closeWelcome;

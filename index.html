@@ -233,6 +233,18 @@
   <button id="wSkip">Skip for now</button>
 </div></div>
 
+<!-- KEY WITHOUT BILLING: shown when a key is refused the Pro story model -->
+<div id="freeWarn" class="overlay" style="z-index:11"><div class="box">
+  <h1>THIS KEY HAS NO BILLING</h1>
+  <p>Google refused the story model for this key, which means it is a free-tier key. Free keys cannot use the Pro model, so the story would be told by a much smaller model.</p>
+  <p class="warn"><b>The experience will be much worse.</b> The phonodeck depends on the Pro model to keep characters, memory and the story's hooks together. On a free key it falls flat, and the free daily limits run out quickly.</p>
+  <h3>TO FIX IT</h3>
+  <ol><li>Set up billing for your key's Google project (a small prepaid balance works): <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>, then <b>Set up billing</b> next to your key.</li>
+    <li>Or ask the person who shared the phonodeck with you for an invite link, which needs no key.</li></ol>
+  <button class="big primary" id="fwKey">Use a different key<small>Paste a key with billing set up, or test this one again once billing is on</small></button>
+  <button id="fwGo">Continue anyway with the smaller model</button>
+</div></div>
+
 <!-- INVITED GUEST WELCOME (a link ending in ?invite=CODE) -->
 <div id="guestWelcome" class="overlay"><div class="box">
   <h1>WELCOME TO THE PHONODECK</h1>
