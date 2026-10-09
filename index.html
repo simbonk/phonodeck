@@ -26,6 +26,8 @@
   .sys{color:var(--dim);font-style:italic;text-align:center}
   #composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);padding-bottom:calc(10px + env(safe-area-inset-bottom))}
   #composer textarea{flex:1;resize:none;height:44px;max-height:140px}
+  /* phones: the reply box gets its own full-width row, with the buttons underneath */
+  @media (max-width:600px){#composer{flex-wrap:wrap}#composer textarea{flex:1 1 100%;height:64px;font-size:16px}#composer #micBtn{flex:1}#composer #send{flex:0 0 30%}}
   pre{white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
   .card b{color:var(--accent)} .tag{color:var(--dim);font-size:13px}
