@@ -1,0 +1,21 @@
+name: Idea
+description: Suggest something new or better for the Phonodeck
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's the idea?
+      description: Describe it in plain words. No code needed.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it make the stories better?
+      description: What happened (or didn't) that gave you the idea?
+  - type: input
+    id: example
+    attributes:
+      label: An example, if you have one
+      placeholder: e.g. "In my Paris story I wanted to..."
