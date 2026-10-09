@@ -370,9 +370,9 @@
     <label><input type="checkbox" id="romNone" style="width:auto"> No romance this time</label>
   </div>
   <div id="curDepth" style="display:none">
-    <div id="curPresets"><div class="tag" style="margin:8px 0 6px">Ready-made stories: tap one, then press "Create my experience". Or make your own below.</div><div id="presetChips"></div></div>
     <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The phonodeck fills in the rest as best it can, and the game begins.</small></button>
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
+    <div id="curPresets" style="margin-bottom:8px"><div class="tag" style="margin:8px 0 6px">Or pick a ready-made story: tap one to fill in every detail, then press "Create my experience" (or Deep set-up to fine-tune it). Tap it again to clear it.</div><div id="presetChips"></div></div>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
   <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">Make some suggestions</button></div>
@@ -1997,7 +1997,8 @@ function presetRender(q) {
   $('curPresets').style.display = q.depth && !kidPick() ? '' : 'none';
   $('presetChips').innerHTML = PRESETS.map(p => '<button class="chip' + (cur.preset === p ? ' sel' : '') + '" data-p="' + p.id + '">' + esc(p.label) + '</button>').join('');
 }
-$('presetChips').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) presetPick(PRESETS.find(p => p.id === b.dataset.p)); });
+$('presetChips').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRESETS.find(p => p.id === b.dataset.p);
+  if (p === cur.preset) { presetDrop(); delete cur.answers.describe; curRender(); } else presetPick(p); });   // tapping the picked story again clears it
 function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', parts.includes(b.dataset.c))); }
 $('curA').addEventListener('input', () => { curChips(); armMore();
   if (cur.preset && (curQs()[cur.i] || {}).depth && !$('curA').value.trim().startsWith(cur.preset.describe.slice(0, 40))) { presetDrop(); presetRender(curQs()[cur.i]); } });
@@ -2012,7 +2013,7 @@ function curStore() {
   cur.answers.me = meSummary();
 }
 function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age].filter(Boolean).join('; ') || '(not given)'; }
-$('depQuick').onclick = () => { if (cur.preset) { presetDrop(); delete cur.answers.describe; } cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
+$('depQuick').onclick = () => { cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };   // keeps a ready-made story you already picked
 $('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; if (!cur.preset) delete cur.answers.describe; curAdvance(); };   // after a ready-made story, the deep questions show its answers
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
 $('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.depth) { cur.answers.depth = 'Quick start'; cur.answers.describe = NOPREF; curAdvance(); return; } if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
