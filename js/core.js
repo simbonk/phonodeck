@@ -143,15 +143,18 @@ function llmFetch(model, messages, o) {
   const h = headers(); if (guest() && o.kind) h['x-holo-kind'] = o.kind;
   return netFetch(apiUrl('chat'), { method: 'POST', headers: h, body: JSON.stringify(body) });
 }
-// Tries the richest request first, then plainer ones if the endpoint rejects a parameter (HTTP 400). Rejected shapes are remembered for the session.
-const badShape = new Set();
+// Tries the richest request first, then plainer ones if the endpoint rejects a parameter (HTTP 400). Rejected shapes are remembered in this
+// browser for a day (keyed by model and shape, not by the call's tag), so each one costs a single 400 rather than one per tag on every page load.
+const SHAPE_KEY = 'phonodeck.badShape', SHAPE_DAYS = 1;   // short, so a 400 that was really about something else does not stick for long
+const badShape = (() => { try { const o = JSON.parse(localStorage.getItem(SHAPE_KEY) || '{}'), now = Date.now(); return new Map(Object.entries(o).filter(([, t]) => now - t < SHAPE_DAYS * 864e5)); } catch (e) { return new Map(); } })();
 async function tryVariants(model, variants, messages) {
   let r = null;
   for (const v of variants) {
-    const sig = model + '|' + JSON.stringify(v);
+    const { kind, ...shape } = v, sig = model + '|' + JSON.stringify(shape);
     if (badShape.has(sig) && v !== variants[variants.length - 1]) continue;
     r = await llmFetch(model, messages, v); if (r.status !== 400) break;
-    badShape.add(sig); console.warn('request rejected (400) with', v, '- retrying with a plainer request');
+    badShape.set(sig, Date.now()); try { localStorage.setItem(SHAPE_KEY, JSON.stringify(Object.fromEntries(badShape))); } catch (e) {}
+    console.warn('request rejected (400) with', v, '- retrying with a plainer request');
   }
   return r;
 }
@@ -196,7 +199,7 @@ async function chat(tag, messages) {
   if (!hasKey()) throw new Error('Set your API key in Settings (or enable offline test mode).');
   const bigModel = tag === 'gm' || tag === 'final' || tag === 'photo' || (tag === 'plan' && S().notesModel === 'story' && !guest());   // GM notes run on the cheap model unless Settings says otherwise
   const eff = tag === 'gm' ? '' : tag === 'plan' || tag === 'final' || tag === 'photo' ? 'low' : 'minimal';   // background calls do not need deep thinking
-  const variants = (eff ? [{ effort: eff }, {}] : [{}]).map(v => Object.assign(v, { kind: tag }));
+  const variants = (eff === 'minimal' ? [{ effort: eff }, { effort: 'low' }, {}] : eff ? [{ effort: eff }, {}] : [{}]).map(v => Object.assign(v, { kind: tag }));   // a model that refuses "minimal" still gets light thinking, not its slow, costly default
   let { r, model } = await quotaRetry(bigModel ? storyModel() : cheapModel(), bigModel, m => tryVariants(m, variants, messages));
   // The cheap model is out of quota or unavailable: background calls (suggestions, memory) borrow the story model rather than fail silently.
   if (!r.ok && !bigModel && [404, 429, 503].includes(r.status) && storyModel() !== model) { console.warn('cheap model "' + model + '" answered HTTP ' + r.status + '; using the story model for "' + tag + '"'); model = storyModel(); r = await tryVariants(model, variants, messages); }
