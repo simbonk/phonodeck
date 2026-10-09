@@ -1540,12 +1540,14 @@ function ambientKind() {
   return k;
 }
 // Soft, slow, professional "thinking" pad: a quiet open-fifth chord (D, A, E) of sine tones with a gentle filter swell and a faint echo.
-function calmPad(c) {
+// Phone speakers can't play the low D (73 Hz) and buzz or crackle when pushed there, so the iPhone clip leaves it out and leans on the upper notes.
+const PAD_NOTES = [[73.42, 0.5], [146.83, 0.55], [220, 0.4], [329.63, 0.28], [440, 0.12]], PAD_NOTES_PHONE = [[146.83, 0.3], [220, 0.45], [329.63, 0.32], [440, 0.14]];
+function calmPad(c, phone) {
   const master = c.createGain(), bus = c.createGain(), filt = c.createBiquadFilter(), delay = c.createDelay(2), fb = c.createGain(), dl = c.createBiquadFilter(), nodes = [];
   filt.type = 'lowpass'; filt.frequency.value = 800; filt.Q.value = 0.4; bus.gain.value = 0.16;
   delay.delayTime.value = 0.5; fb.gain.value = 0.38; dl.type = 'lowpass'; dl.frequency.value = 1100;
   bus.connect(filt); filt.connect(master); filt.connect(delay); delay.connect(dl); dl.connect(fb); fb.connect(delay); dl.connect(master);
-  [[73.42, 0.5], [146.83, 0.55], [220, 0.4], [329.63, 0.28], [440, 0.12]].forEach(([f, g]) => [-4, 4].forEach(dt => {
+  (phone ? PAD_NOTES_PHONE : PAD_NOTES).forEach(([f, g]) => [-4, 4].forEach(dt => {
     const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.value = f; o.detune.value = dt; og.gain.value = g / 2; o.connect(og); og.connect(bus); o.start(); nodes.push(o);
   }));
   const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.05; lg.gain.value = 220; lfo.connect(lg); lg.connect(filt.frequency); lfo.start(); nodes.push(lfo);   // slow brightness swell
@@ -1554,8 +1556,8 @@ function calmPad(c) {
   master.gain.setValueAtTime(0, c.currentTime); master.gain.linearRampToValueAtTime(0.5, c.currentTime + 2);
   return { master, nodes };
 }
-function ambientGraph(c, kind) {   // builds the sound on any audio context: the live one, or an offline one that renders a clip for iPhone
-  if (kind === 'calm') return calmPad(c);
+function ambientGraph(c, kind, phone) {   // builds the sound on any audio context: the live one, or an offline one that renders a clip for iPhone
+  if (kind === 'calm') return calmPad(c, phone);
   const len = c.sampleRate * 4, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0); let last = 0;
   for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; if (kind === 'rain') d[i] = w; else { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } }
   const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
@@ -1587,7 +1589,7 @@ function startAmbient() {
   if (amb) return; const kind = ambientKind(); if (kind === 'off') return;
   if (IOS) {
     const me = amb = { el: true };
-    renderClip('amb-' + kind, 30, c => ambientGraph(c, kind), true).then(url => { if (amb !== me) return; ambEl.src = url; return ambEl.play(); }).catch(e => console.warn('thinking sound', e));
+    renderClip('amb-' + kind, 30, c => ambientGraph(c, kind, true), true).then(url => { if (amb !== me) return; ambEl.src = url; return ambEl.play(); }).catch(e => console.warn('thinking sound', e));
     return;
   }
   const c = ensureAudio(); if (!c) return;
