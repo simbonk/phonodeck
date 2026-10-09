@@ -223,7 +223,8 @@ function fillModels() {
   fillCombo('setEmbed', [GEMINI.embed], embedModel(), true);
   fillCombo('setTtsModel', [GEMINI.ttsModel, GEMINI.ttsBackup], S().ttsModel || GEMINI.ttsModel);
 }
-$('setTtsVoice').innerHTML = GEMINI_VOICES.map(v => '<option>' + v + '</option>').join('') + '<option value="__custom">Custom voice ID...</option>';
+{ const opts = g => GEMINI_VOICES.filter(v => (VOICE_NAMES[v] || [])[2] === g).sort((x, y) => voiceName(x).localeCompare(voiceName(y))).map(v => '<option value="' + v + '">' + voiceName(v) + ' (' + VOICE_NAMES[v][1] + ')</option>').join('');
+  $('setTtsVoice').innerHTML = '<optgroup label="Women">' + opts('f') + '</optgroup><optgroup label="Men">' + opts('m') + '</optgroup>' + GEMINI_VOICES.filter(v => !VOICE_NAMES[v]).map(v => '<option>' + v + '</option>').join('') + '<option value="__custom">Custom voice ID...</option>'; }
 function syncTtsVoiceUI() { $('setTtsVoiceCustom').style.display = $('setTtsVoice').value === '__custom' ? '' : 'none'; }
 $('setTtsVoice').addEventListener('change', () => { syncTtsVoiceUI(); db.settings.narratorPicked = true; });
 function loadTtsVoice() {

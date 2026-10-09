@@ -49,6 +49,17 @@ function chunkText(t) {   // Chrome cuts long utterances off, so speak sentence-
 // ---------------- Gemini narrator voice: natural, audiobook-style speech via Google's TTS models ----------------
 // Uses the same Google API key. Falls back to the browser voice if a request fails or the daily voice quota runs out.
 const GEMINI_HOST = 'https://generativelanguage.googleapis.com/v1beta';
+// Google's voice IDs are star names (Sulafat, Algenib...), which are hard to say and remember, so players see a friendly name and a word
+// about the sound instead. The ID is still what is saved and sent to Google.
+const VOICE_NAMES = {
+  Sulafat: ['Rosie', 'warm', 'f'], Vindemiatrix: ['Clara', 'gentle', 'f'], Gacrux: ['Margot', 'mature', 'f'], Achernar: ['Lily', 'soft', 'f'], Aoede: ['Daisy', 'breezy', 'f'],
+  Autonoe: ['Sunny', 'bright', 'f'], Callirrhoe: ['Molly', 'easy-going', 'f'], Despina: ['Hazel', 'smooth', 'f'], Erinome: ['Ivy', 'clear', 'f'], Kore: ['Grace', 'firm', 'f'],
+  Laomedeia: ['Poppy', 'upbeat', 'f'], Leda: ['Tilly', 'youthful', 'f'], Pulcherrima: ['Bella', 'bold', 'f'], Zephyr: ['Joy', 'bright', 'f'],
+  Charon: ['Arthur', 'deep', 'm'], Algieba: ['Leo', 'smooth', 'm'], Algenib: ['Jack', 'gravelly', 'm'], Achird: ['Sam', 'friendly', 'm'], Alnilam: ['Henry', 'firm', 'm'],
+  Enceladus: ['Felix', 'breathy', 'm'], Fenrir: ['Max', 'excitable', 'm'], Iapetus: ['Oliver', 'clear', 'm'], Orus: ['George', 'firm', 'm'], Puck: ['Benny', 'upbeat', 'm'],
+  Rasalgethi: ['Walter', 'informative', 'm'], Sadachbia: ['Charlie', 'lively', 'm'], Sadaltager: ['Hugo', 'knowledgeable', 'm'], Schedar: ['Miles', 'even', 'm'],
+  Umbriel: ['Teddy', 'easy-going', 'm'], Zubenelgenubi: ['Danny', 'casual', 'm'] };
+const voiceName = id => (VOICE_NAMES[id] || [id])[0];
 const GEMINI_VOICES = ['Achernar','Achird','Algenib','Algieba','Alnilam','Aoede','Autonoe','Callirrhoe','Charon','Despina','Enceladus','Erinome','Fenrir','Gacrux','Iapetus','Kore','Laomedeia','Leda','Orus','Pulcherrima','Puck','Rasalgethi','Sadachbia','Sadaltager','Schedar','Sulafat','Umbriel','Vindemiatrix','Zephyr','Zubenelgenubi'];
 const DEFAULT_TTS_VOICE = 'Sulafat';
 let activeGemini = null, geminiWarned = false, geminiBlocked = false, ttsBackupNow = false;   // ttsBackupNow: the chosen voice model hit its daily quota, so use the other one until reload or Test voice
