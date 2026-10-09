@@ -370,9 +370,9 @@
     <label><input type="checkbox" id="romNone" style="width:auto"> No romance this time</label>
   </div>
   <div id="curDepth" style="display:none">
-    <div id="curPresets"><div class="tag" style="margin:8px 0 6px">Ready-made stories: tap one, then press "Create my experience". Or make your own below.</div><div id="presetChips"></div></div>
     <button class="big" id="depQuick">Quick start<small>Describe what you want in a sentence or two. The phonodeck fills in the rest as best it can, and the game begins.</small></button>
     <button class="big" id="depDeep">Deep set-up<small>A carefully curated experience: optionally upload a photo to paint the world from, then a few more questions, with suggestions tailored to what you have told me.</small></button>
+    <div id="curPresets" style="margin-bottom:8px"><div class="tag" style="margin:8px 0 6px">Or pick a ready-made story: tap one to fill in every detail, then press "Create my experience" (or Deep set-up to fine-tune it). Tap it again to clear it.</div><div id="presetChips"></div></div>
   </div>
   <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
   <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">Make some suggestions</button></div>
@@ -1729,7 +1729,7 @@ $('micBtn').onclick = () => {
 // A session of 15 minutes or less is told as a clean, simple short story, and its option chips (cs) stay on Earth, in familiar times.
 const QUESTIONS = [
   { id: 'time', single: true, q: 'How much time do you have?', h: 'You play by the clock, not by turns. The Game Master keeps an eye on the time and lands a proper ending before it runs out, then you get a report card. 10-15 minutes makes a quick short story.', c: ['10 minutes (a quick story)', '20 minutes', '30 minutes', '45 minutes', '1 hour', '2 hours (an epic)'], ph: 'Or type your own, e.g. 25 minutes' },
-  { id: 'feeling', suggest: 'Make some suggestions', q: 'What feeling do you want to come away with?', h: 'This is the Game Master\'s main goal: everything bends toward it. Describe it in your own words; the more specific, the better the story. Stuck? Press "Make some suggestions" (it builds on anything you have typed).', c: [], ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
+  { id: 'feeling', suggest: 'Make some suggestions', q: 'What feeling do you want to come away with?', h: 'The phonodeck is a mirror: it gives back what you bring to it. Delivering this feeling is the Game Master\'s main goal, and the whole story bends toward it. Describe it in your own words; the more specific, the better. Stuck? Press "Make some suggestions" to build on anything you have typed.', c: [], ph: 'e.g. the cosy feeling of a snow day with nowhere to be' },
   { id: 'mode', single: true, q: 'How do you want to play?', h: 'Curated story: a hidden plot with a beginning, middle and end, which bends (or waits) when you are happy elsewhere. Experience simulator: no plot points at all, just a richly painted world, your own goal and the feeling.', c: ['Curated story (a plot that bends to you)', 'Experience simulator (no plot, just the world and the feeling)'] },
   { id: 'photo', photo: true, q: 'Paint the world from a photo?', h: 'Optional. A picture is worth a thousand words: the phonodeck works out the place, the time and the people, writes the world from them, and fills in the remaining questions for you. Add a caption if you like.', c: [], ph: 'Optional caption: who or where is this? e.g. "Me and Dana in Lisbon, summer 2019"' },
   { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
@@ -1997,7 +1997,8 @@ function presetRender(q) {
   $('curPresets').style.display = q.depth && !kidPick() ? '' : 'none';
   $('presetChips').innerHTML = PRESETS.map(p => '<button class="chip' + (cur.preset === p ? ' sel' : '') + '" data-p="' + p.id + '">' + esc(p.label) + '</button>').join('');
 }
-$('presetChips').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) presetPick(PRESETS.find(p => p.id === b.dataset.p)); });
+$('presetChips').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRESETS.find(p => p.id === b.dataset.p);
+  if (p === cur.preset) { presetDrop(); delete cur.answers.describe; curRender(); } else presetPick(p); });   // tapping the picked story again clears it
 function curChips() { const parts = $('curA').value.split(/,\s*/); $('curChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', parts.includes(b.dataset.c))); }
 $('curA').addEventListener('input', () => { curChips(); armMore();
   if (cur.preset && (curQs()[cur.i] || {}).depth && !$('curA').value.trim().startsWith(cur.preset.describe.slice(0, 40))) { presetDrop(); presetRender(curQs()[cur.i]); } });
@@ -2012,7 +2013,7 @@ function curStore() {
   cur.answers.me = meSummary();
 }
 function meSummary() { const x = cur.answers; return [x.name && 'name ' + x.name, x.age && 'age ' + x.age].filter(Boolean).join('; ') || '(not given)'; }
-$('depQuick').onclick = () => { if (cur.preset) { presetDrop(); delete cur.answers.describe; } cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };
+$('depQuick').onclick = () => { cur.answers.depth = 'Quick start'; curRender(); $('curA').focus(); };   // keeps a ready-made story you already picked
 $('depDeep').onclick = () => { cur.answers.depth = 'Deep set-up'; if (!cur.preset) delete cur.answers.describe; curAdvance(); };   // after a ready-made story, the deep questions show its answers
 $('curBack').onclick = () => { curStore(); if (cur.i > 0) { cur.i--; curRender(); } };
 $('curSkip').onclick = () => { const q = curQs()[cur.i]; if (q.depth) { cur.answers.depth = 'Quick start'; cur.answers.describe = NOPREF; curAdvance(); return; } if (q.photo) { cur.photo = null; $('photoFile').value = ''; } $('curA').value = ''; cur.answers[q.id] = NOPREF; curAdvance(); };
