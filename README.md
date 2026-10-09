@@ -100,5 +100,9 @@ The `api` folder holds three small Vercel functions with no dependencies. `api/g
 - **429:** rate limit or daily quota. Wait, or switch the voice engine to the free browser voice.
 - **Browser storage is full:** export a backup, or link a save folder in *Settings > Data*.
 
+## Ideas and contributing
+
+Got an idea or found a bug? [Open an issue](https://github.com/simbonk/phonodeck/issues/new/choose) and pick Idea or Bug. No code needed. To build something yourself, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 MIT. See `LICENSE`.
