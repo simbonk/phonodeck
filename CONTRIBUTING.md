@@ -8,6 +8,8 @@ Thanks for wanting to help. There are two ways in.
 2. Open [a new issue](https://github.com/simbonk/phonodeck/issues/new/choose) and pick **Idea** or **Bug**.
 3. Describe it in plain words. A short example from a story you played helps a lot.
 
+Rather not use GitHub? Email [phonodeck.help@gmail.com](mailto:phonodeck.help@gmail.com).
+
 Please search the [open issues](https://github.com/simbonk/phonodeck/issues) first; if someone already asked for it, add a comment or a 👍 there instead.
 
 ## Build something yourself (code)
