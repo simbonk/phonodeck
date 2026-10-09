@@ -189,10 +189,10 @@ function curRender() {
   curNextLabel();
   $('curMsg').textContent = ''; armMore();
 }
-const PRESET_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid'];
+const PRESET_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'goal', 'hook', 'allies', 'threat', 'play', 'avoid'];
 function presetPick(p) {   // fills the box, the feeling and every set-up answer; the Game Master also gets the story beats
   if (cur.preset) presetDrop();
-  cur.preset = p; const a = cur.answers; a.pick = 'preset'; a.describe = p.describe; a.feeling = p.feeling; a.mode = QBY.mode.c[0];
+  cur.preset = p; const a = cur.answers; a.pick = 'preset'; a.describe = p.describe; a.feeling = p.feeling; a.mode = QBY.mode.c[p.sim ? 1 : 0];
   PRESET_IDS.forEach(id => { a[id] = p[id]; }); curRender();
 }
 function presetDrop() { const p = cur.preset; if (!p) return; ['feeling', ...PRESET_IDS].forEach(id => { if (cur.answers[id] === p[id]) delete cur.answers[id]; }); delete cur.answers.describe; delete cur.answers.pick; cur.preset = null; }
@@ -304,7 +304,7 @@ async function curAdvance() {
     : q.id === 'romance' ? [{ id: 'romance', q: 'Romance', a: noRomance(cur.answers.romance) ? '' : cur.answers.romance }].filter(x => x.a)
     : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]);
   if (cur.preset) { ['feeling', 'mode', ...PRESET_IDS].forEach(id => { if (cur.answers[id] && !answers.some(x => x.id === id)) answers.push({ id, q: QBY[id].q, a: cur.answers[id] }); });
-    answers.push({ id: 'beats', q: 'Story beats for the Game Master (a guide for a good series of events; keep them secret from the player)', a: cur.preset.beats }); }
+    if (cur.preset.beats) answers.push({ id: 'beats', q: 'Story beats for the Game Master (a guide for a good series of events; keep them secret from the player)', a: cur.preset.beats }); }
   { const me = Object.assign({}, S().me), nm = cur.answers.name, age = +cur.answers.age; let ch = false;   // remember your name and age for next time (never overwrites them)
     const [first, ...rest] = String(nm || '').split(/\s+/), last = rest.join(' ');
     if (first && !me.name) { me.name = first; $('setMeName').value = first; ch = true; }

@@ -1,9 +1,34 @@
 // Phonodeck: the curated experiences offered in the set-up. Add an object to PRESETS to add an experience.
 // Plain scripts that share one global scope (no build step); index.html loads them in order: prompts, experiences, core, engine, voice, curator, ui.
 
-// Curator's picks: ready-made stories. One tap fills the description, the feeling and every set-up answer (the description can be
-// edited); "beats" go to the Game Master only, as a guide for a good series of events.
+// Curator's picks: ready-made stories, plus experiences marked sim: true (the experience simulator: no plot, and "goal" is the player's
+// goal). One tap fills the description, the feeling and every set-up answer (the description can be edited); "beats" go to the Game
+// Master only, as a guide for a good series of events.
 const PRESETS = [
+  { id: 'speakeasy', sim: true, label: 'Los Angeles, 1925: A Speakeasy in the Rain', title: 'A Speakeasy in the Rain',
+    feeling: 'Warm, nostalgic comfort',
+    describe: 'It is a stormy night in Los Angeles in 1925, and I have ducked into a hidden speakeasy to wait out the rain. I take a stool at the bar and talk with the serious, quiet bartender and a friendly regular about their hopes and dreams for the future.',
+    world: 'Los Angeles, 1925, during Prohibition',
+    vibe: 'Cozy, Melancholic, Wholesome',
+    who: 'A traveller new in town, soaked from the storm, with time to kill and a good ear for other people\'s stories',
+    traits: 'Curious and easy to talk to, but a little homesick',
+    where: 'A small speakeasy hidden behind a flower shop downtown: rain drumming on the skylight, a jazz record crackling on the gramophone, a warm lamp over a long mahogany bar',
+    goal: 'Sit at the bar, wait out the storm, and hear the bartender and the regular talk about their hopes and dreams for the future',
+    allies: 'Walter Pruitt, the bartender: serious, precise and quietly kind, saving every nickel for a dream he rarely mentions; Dolores Vega, a regular who sews costumes for the movie studios and is sure her big break is just around the corner',
+    play: 'Lots of dialogue, Forgiving',
+    avoid: 'Keep it PG-13; no danger and no police raid, just warm conversation' },
+  { id: 'suwarrow', sim: true, label: 'Suwarrow, Cook Islands: Washed Ashore', title: 'Washed Ashore',
+    feeling: 'Deep connection and friendship',
+    describe: 'My cruise ship has sunk, and I have washed up on Suwarrow, a tiny coral atoll in the Cook Islands, hundreds of miles from anywhere. There is no danger and no race to be rescued. On the island I meet a stranger, and slowly we become good friends.',
+    world: 'Suwarrow atoll, the Cook Islands, today',
+    vibe: 'Wholesome, Cozy, Whimsical',
+    who: 'A cruise passenger who has just washed ashore with nothing but the clothes I am wearing and a waterproof watch',
+    traits: 'Resourceful and good-humoured, but used to being busy and not sure what to do with stillness',
+    where: 'A white coral beach on Suwarrow at sunrise, a calm turquoise lagoon, coconut palms leaning over the water, and a line of footprints in the sand that are not mine',
+    goal: 'Meet the stranger on the island, get to know them, and become good friends',
+    allies: 'Teina, the stranger on the island: the soft-spoken caretaker of the atoll, who has lived here alone for years and knows every tide, reef and star',
+    play: 'Lots of dialogue, Exploration, Forgiving',
+    avoid: 'Keep it PG; no danger, no injuries and no rescue drama' },
   { id: 'trek', label: 'Star Trek TNG: First Contact', title: 'First Contact',
     feeling: 'Wonder, pride, and laughing with my crew',
     describe: 'I am the captain of a brand-new starship on her maiden mission. My first officer is an android trying earnestly to understand humour, and my doctor is brilliant, jaded and very funny. A species has just made its first warp flight, and we must make first contact without frightening them, embarrassing the Federation, or letting the doctor say anything unfortunate.',
@@ -18,20 +43,6 @@ const PRESETS = [
     play: 'Lots of dialogue, Puzzles and clues, Forgiving',
     avoid: 'Keep it PG-13; gentle humour, true to the spirit of the show',
     beats: 'Start with the Teyari warp test going wrong: their pilot is stranded, and saving her means revealing the ship. Commander Ithen\'s attempts at jokes misfire early, then one lands perfectly at the most tense moment of the negotiation. Dr. Hale treats the Teyari pilot and becomes her unlikely friend. The general\'s fear peaks in a standoff that is won with honesty and a shared laugh, not phasers. End with the Teyari inviting the crew to their first warp festival, and Ithen\'s first genuine laugh.' },
-  { id: 'hollywood', label: 'Hollywood, 1927: The Last Silent Picture', title: 'The Last Silent Picture',
-    feeling: 'Giddy fun and a big finish',
-    describe: 'I am the most famous face in silent pictures, and I have never once spoken on screen. The talkies are coming, and the studio\'s nervous young sound engineer has one week to make me sound like a star. My rival wants me to flop, my producer is selling the studio to a pickle magnate, and the premiere is Friday.',
-    world: 'Hollywood, October 1927, the week The Jazz Singer changes everything',
-    vibe: 'Funny, Whimsical, Epic',
-    who: 'The biggest star of silent pictures, adored for my eyebrows and my pratfalls, terrified of my own voice',
-    traits: 'Charming, fearless at stunts and a born ham, but vain, dramatic and secretly convinced I sound like a goose',
-    where: 'A sound stage at Paragon Pictures, padded with blankets against noise, a microphone hidden in a flower pot, five days before the premiere',
-    hook: 'Survive the switch to talking pictures and make Friday\'s premiere the triumph of the decade',
-    allies: 'Eddie Marsh, the jittery young sound engineer who is secretly a genius; Gloria Fenn, my wisecracking stunt double; Mr. Abernathy, my long-suffering butler who has heard me sing in the bath',
-    threat: 'Vivienne LaRue, my glamorous rival, who is sabotaging the sound tests; Horace Gherkin, the pickle magnate buying the studio; and the ticking clock to Friday',
-    play: 'Lots of dialogue, Action heavy, Forgiving',
-    avoid: 'Keep it PG-13; slapstick welcome',
-    beats: 'The first sound test is a disaster in a funny way (the microphone picks up everything except the star). Vivienne\'s sabotage escalates with each day. Eddie\'s invention keeps nearly working. Plant Mr. Abernathy\'s remark about the bath singing early: at the premiere the sound fails and the star saves the night by singing live, a voice nobody expected. Mr. Gherkin, charmed, keeps the studio. End with a standing ovation and a cue for a sequel.' },
   { id: 'orient', label: 'Orient Express, 1931: The Magician\'s Last Trick', title: 'The Magician\'s Last Trick',
     feeling: 'Cosy delight with a puzzle',
     describe: 'I am a travelling stage magician on the Orient Express from Paris to Istanbul. On the first night a duchess\'s diamond vanishes in the middle of my act. Everyone assumes it is part of the show, including me, until I realise I did not do it. I have three snowbound days and a carriage of eccentric suspects to find out who did.',
@@ -45,19 +56,5 @@ const PRESETS = [
     threat: 'A thief hidden among the passengers (a nervous honeymooning couple, a famous novelist, a chess grandmaster and a very polite conductor), and my own past catching up with me',
     play: 'Puzzles and clues, Lots of dialogue, Forgiving',
     avoid: 'Keep it PG-13; no murder, a cosy mystery',
-    beats: 'The theft happens during the magician\'s vanishing trick, so every clue is hidden in the act itself. Each suspect has a harmless secret that looks guilty. The novelist is secretly writing the whole thing down. Plant the Duchess\'s calm early: she hid the diamond herself to test who on the train could be trusted, but a real thief then took it from her hiding place. The magician solves it with one last trick in the dining car. End with the train pulling into Istanbul at sunrise.' },
-  { id: 'moon', label: 'The Moon, 2069: The First Café on the Moon', title: 'The First Café on the Moon',
-    feeling: 'Warm, cosy wonder',
-    describe: 'I have just opened the first café on the Moon, in a dome looking out at the Earth. My regulars are a homesick astronaut, a robot who wants to learn to bake, and a billionaire who keeps trying to buy the place. Tonight the Earth will be full in the sky, and someone very important has booked a table.',
-    world: 'Tranquility Base, the Moon, 2069, a hundred years after the first landing',
-    vibe: 'Cozy, Whimsical, Wholesome',
-    who: 'The owner of Earthrise, the first café on the Moon: a former engineer who gave up rockets to make the perfect cup of coffee in one-sixth gravity',
-    traits: 'Warm, inventive and a brilliant fixer of broken things, but stubborn and hopeless with money',
-    where: 'Earthrise café, a glass dome on the rim of a crater, the blue Earth hanging in the black sky, coffee steam rising very slowly in low gravity',
-    hook: 'Make tonight perfect for the mysterious guest who booked the best table for Full Earth night, and keep the café out of the billionaire\'s hands',
-    allies: 'Commander Asha Reyes, a homesick astronaut who has not been home in two years; BX-7, a maintenance robot determined to bake bread',
-    threat: 'Silas Crane, a charming billionaire who wants to turn the café into a theme park; a failing air recycler; and dough that will not rise in low gravity',
-    play: 'Lots of dialogue, Exploration, Forgiving',
-    avoid: 'Keep it PG; cosy, no peril beyond a few malfunctions',
-    beats: 'Every regular has a small wish for the evening. BX-7\'s bread keeps floating away, a running gag that pays off. The air recycler fails at the worst moment and the owner fixes it with something from the kitchen. Plant the reserved table early: the important guest turns out to be the last surviving person who watched the 1969 landing on television as a child, here to see the Earth from the Moon at last. Silas Crane is moved and backs off. End with everyone watching the full Earth together.' }
+    beats: 'The theft happens during the magician\'s vanishing trick, so every clue is hidden in the act itself. Each suspect has a harmless secret that looks guilty. The novelist is secretly writing the whole thing down. Plant the Duchess\'s calm early: she hid the diamond herself to test who on the train could be trusted, but a real thief then took it from her hiding place. The magician solves it with one last trick in the dining car. End with the train pulling into Istanbul at sunrise.' }
 ];
