@@ -4,20 +4,6 @@
 // Curator's picks: ready-made stories. One tap fills the description, the feeling and every set-up answer (the description can be
 // edited); "beats" go to the Game Master only, as a guide for a good series of events.
 const PRESETS = [
-  { id: 'paris', label: 'Paris, 1944: The Medic Comes Home', title: 'The Medic Comes Home',
-    feeling: 'From numbness to seeing the beauty in everything again',
-    describe: 'I am a field medic just back in Paris from the front, a week after the Liberation. The city is celebrating, but all I can see is rubble and ration queues. Then I meet people who see the world completely differently, and slowly they show me the beauty I stopped noticing.',
-    world: 'Paris, late August 1944, the week after the Liberation',
-    vibe: 'Melancholic, Wholesome, Cozy',
-    who: 'A field medic in the Free French forces, home on leave after a year at the front: good hands, few words, sleeps badly',
-    traits: 'Steady and kind in a crisis, but numb, guarded and certain the world has lost its colour',
-    where: 'A café terrace in Montmartre on a hot, bright morning, church bells ringing, flags in every window, while I sit apart with a cup of bad chicory coffee',
-    hook: 'Find a reason to feel alive again before my leave ends and I go back to the front',
-    allies: 'Lucien, a one-armed accordion player who plays for anyone who looks sad; Madame Odette, a flower seller who grows roses in shell craters; Pipo, a seven-year-old who collects lost buttons and the stories behind them',
-    threat: 'My own grief and exhaustion, the memory of the soldiers I could not save, and the day my leave runs out',
-    play: 'Lots of dialogue, Rich, detailed prose, Forgiving',
-    avoid: 'Keep it PG-13; no gore, the war stays mostly off-stage',
-    beats: 'Open on the noise of celebration that the medic cannot feel. Each companion offers one small, concrete beauty (a song, a rose, a button with a story) and asks nothing in return. Midway, a medical emergency in the street lets the medic\'s skill save someone, and the city sees them. Plant Pipo\'s button collection early: at the end Pipo gives the medic a button "to remember Paris by", the one from their own uniform, found on the first morning. End at dusk with the city lights coming on for the first time in four years.' },
   { id: 'trek', label: 'Star Trek TNG: First Contact', title: 'First Contact',
     feeling: 'Wonder, pride, and laughing with my crew',
     describe: 'I am the captain of a brand-new starship on her maiden mission. My first officer is an android trying earnestly to understand humour, and my doctor is brilliant, jaded and very funny. A species has just made its first warp flight, and we must make first contact without frightening them, embarrassing the Federation, or letting the doctor say anything unfortunate.',
