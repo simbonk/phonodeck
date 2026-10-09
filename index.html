@@ -197,21 +197,24 @@
 <!-- FIRST-RUN WELCOME -->
 <div id="welcome" class="overlay"><div class="box">
   <h1>WELCOME TO THE PHONODECK</h1>
+  <p>The Phonodeck is an interactive text-to-speech story maker. The goal is to make the stories feel as real as possible: exactly like a narrator is reading you a good book that you can control.</p>
   <div class="whyBox"></div>
-  <h3>SET UP IN ABOUT A MINUTE</h3>
-  <ol><li>Get a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> and set up billing for it (a small prepaid balance works).</li><li>Paste it below.</li><li>Press Start.</li></ol>
-  <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
-  <p class="warn">Your key is stored only in this browser and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer.</p>
+  <p>Setup should take a minute.</p>
   <h3>BEFORE YOU START</h3>
   <ol>
     <li><b>Use Chrome, Edge or Safari.</b> Firefox can't turn speech into text, so hands-free talking won't work there.</li>
     <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
-    <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works: tap <b>&#127911; Hands-free</b> next to Send, talk, and say <b>"make it so"</b> to send.</li>
+    <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
+    <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works.</li>
   </ol>
   <p class="warn" id="wNoVoice" style="display:none"><b>This browser can't listen.</b> Hands-free talking needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>: Firefox can't turn speech into text. The phonodeck is at its best when you talk to it, so please open this page in one of those browsers. You can still type if you prefer.</p>
   <button class="big" id="wMic">Test the microphone<small>Allow it, then say something like "Hello, phonodeck"</small></button>
   <p class="tag" id="wMicStatus"></p>
-  <button class="big primary" id="wStart">Save key and start<small>Opens the quick questions</small></button>
+  <h3>YOUR GEMINI KEY</h3>
+  <ol><li>Get a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> and set up billing for it (a small prepaid balance works).</li><li>Paste it below.</li><li>Press Start.</li></ol>
+  <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
+  <p class="warn">Your key is stored only in this browser and sent only to Google. Use a key with a low spending cap, and do not enter it on a shared computer.</p>
+  <button class="big primary" id="wStart">Save key and start<small>A few quick questions, then your story begins</small></button>
   <button class="big" id="wDemo">Try the offline demo<small>No key needed. A fake Game Master so you can look around (turn it off in Settings &gt; Connection).</small></button>
   <button id="wSkip">Skip for now</button>
 </div></div>
