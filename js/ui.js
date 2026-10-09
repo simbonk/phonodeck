@@ -226,7 +226,7 @@ function fillModels() {
 { const opts = g => GEMINI_VOICES.filter(v => (VOICE_NAMES[v] || [])[2] === g).sort((x, y) => voiceName(x).localeCompare(voiceName(y))).map(v => '<option value="' + v + '">' + voiceName(v) + ' (' + VOICE_NAMES[v][1] + ')</option>').join('');
   $('setTtsVoice').innerHTML = '<optgroup label="Women">' + opts('f') + '</optgroup><optgroup label="Men">' + opts('m') + '</optgroup>' + GEMINI_VOICES.filter(v => !VOICE_NAMES[v]).map(v => '<option>' + v + '</option>').join('') + '<option value="__custom">Custom voice ID...</option>'; }
 function syncTtsVoiceUI() { $('setTtsVoiceCustom').style.display = $('setTtsVoice').value === '__custom' ? '' : 'none'; }
-$('setTtsVoice').addEventListener('change', () => { syncTtsVoiceUI(); db.settings.narratorPicked = true; });
+$('setTtsVoice').addEventListener('change', () => { syncTtsVoiceUI(); db.settings.narratorPicked = true; if (A()) delete A().ttsVoice; });   // the narrator you pick here wins over one a story chose
 function loadTtsVoice() {
   const v = S().ttsVoice || DEFAULT_TTS_VOICE;
   if (GEMINI_VOICES.includes(v)) $('setTtsVoice').value = v; else { $('setTtsVoice').value = '__custom'; $('setTtsVoiceCustom').value = v; }

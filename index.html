@@ -100,6 +100,9 @@
           <label><input type="checkbox" id="setSpeak" style="width:auto"> Read Game Master replies aloud</label>
           <label>Voice engine</label>
           <div class="row"><select id="setEngine" style="width:100%"><option value="browser">Browser voice (free; more robotic)</option><option value="gemini">Gemini narrator voice (natural, expressive; uses your daily voice quota)</option></select></div>
+          <label>Narrator (Gemini voice)</label>
+          <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
+          <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID" style="display:none"></div>
         </div>
         <div class="grp">
           <b>DICTATION</b>
@@ -107,9 +110,6 @@
         </div>
         <div class="grp hostOnly">
           <b>GEMINI NARRATOR VOICE</b>
-          <label>Narrator voice</label>
-          <div class="row"><select id="setTtsVoice" style="width:100%"></select></div>
-          <div class="row"><input id="setTtsVoiceCustom" placeholder="Custom voice ID" style="display:none"></div>
           <label>Speech model (the lite one is the default and costs about a third less; each model has its own daily limit, and the game switches to the other one by itself if yours runs out)</label>
           <div class="row"><select id="setTtsModel" style="width:100%"></select></div>
           <label>Voice requests per reply (your plan limits voice requests per day). One request makes the quota last longest, but the voice starts only once the whole reply is written; more requests start sooner.</label>
