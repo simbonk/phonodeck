@@ -2,7 +2,7 @@
 
 *The precursor to the holodeck.*
 
-A single-file, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
+A no-build, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
 
 <!-- Add a screenshot here: ![Phonodeck](screenshot.png) -->
 
@@ -11,9 +11,11 @@ A single-file, AI-run text adventure powered by Google Gemini. Say how much time
 - **The feeling comes first:** describe the feeling you want to come away with in your own words (or press *Suggest some feelings*, which builds on anything you have typed). It goes into the bible and is the Game Master's main goal.
 - **It notices when you're happy:** every turn the memory pass also reads your mood. When the feeling is landing or you are clearly enjoying a character or place, the plot steps aside: no interruptions, no new complications, and threats don't follow you 200 light years away. Walk away from the plot and it lets you go.
 - **Two ways to play:** a *curated story* (a hidden roadmap timed to the session, which bends or waits for you) or an *experience simulator* (no plot points at all: a richly painted world, your own goal, and the feeling).
-- **Personal details:** your name, gender and who you're interested in (both free text, in your own words) and your birth year live in *Settings > Personal details* and are filled in for every new experience (change them for any one story). The romance answer also picks the narrator: Sulafat if you're interested in women, Charon if men.
-- **About you, and an age-appropriate story:** question 4 asks your name and age (and, for adults only, romance). A 10-year-old gets a G-rated, simple, playful story with no romance; teenagers get PG; adults get references pitched to their generation.
-- **Quick start or deep set-up:** question 5 has two big buttons: Quick start shows a box to describe what you want, and Create starts the game; Deep set-up goes straight on to an optional photo and the detailed questions, whose suggestions follow your earlier answers (children get their own options).
+- **Personal details:** your name, gender and who you're interested in (both free text, in your own words) and your birth year live in *Settings > Personal details* and are filled in for every new experience (change them for any one story).
+- **Choose your narrator:** the first time, the set-up offers six Gemini narrator voices (three women, three men); tap one to hear it. The choice is saved, so the step is skipped after that (change it in *Settings > Voice & sound*).
+- **About you, and an age-appropriate story:** the set-up asks your in-game name, age and gender (they can be made up, and are saved in Settings); romance is asked later, for adults only. A 10-year-old gets a G-rated, simple, playful story with no romance; teenagers get PG; adults get references pitched to their generation.
+- **Curated experiences, or build it yourself:** pick a hand-made experience (its description shows and can be edited; *Build my world* starts it), or tap *Build the world myself* for the feeling you want, how you want to play, an optional photo, and the detailed questions, whose suggestions follow your earlier answers (children get their own options).
+- **Named characters, introduced one at a time:** a 10-minute story has at most two named characters (plus a named antagonist), rising to three (plus the villain) at 30 minutes and up. Everyone else is known by their role (the pilot, the conductor) until the player asks their name.
 - **Paint the world from a photo:** upload a picture and the phonodeck works out the place, the time and the people, writes a detailed description of the world, adds lore, and fills in the rest of the questions.
 - **Living lore:** when something changes in play (a relationship, a location, a secret revealed), the lore entry is updated, with earlier versions kept in the World tab. It rides on the existing memory call, so it costs no extra requests.
 - **Short sessions that read like short stories:** 15 minutes or less is told clean and simple (one goal, a small cast, a payoff ending), and its suggested settings stay on Earth in familiar times.
@@ -36,6 +38,18 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 ### Running it
 - **Hosted:** push to a GitHub repo, and enable *Settings > Pages* (deploy from the main branch). Share the link; every player brings their own key.
 - **Locally:** from the folder, run `python3 -m http.server 8080` and open `http://localhost:8080/`. (Opening the file directly works, but browsers then re-ask for microphone permission every time.)
+
+### Where things live
+No build step: `index.html` is the page, and it loads plain scripts in order, all sharing one global scope.
+- `js/prompts.js`: every instruction the models receive (Game Master, architect, showrunner, director, memory, photo, report card). Tune the storytelling here.
+- `js/experiences.js`: the curated experiences in the set-up. Add an object to `PRESETS` to add one.
+- `js/core.js`: start-up state, invites, saving, model calls, the cost meter and retrieval.
+- `js/engine.js`: the story engine (clock, a turn of play, memory, recall, showrunner and director, chapters, undo, lore editor).
+- `js/voice.js`: speech in and out (Gemini narrator, browser voice, voice tests, thinking sound, hands-free).
+- `js/curator.js`: the set-up wizard, the photo reader, world creation, short stories and the report card.
+- `js/ui.js`: screens and controls (start screen, story view, settings, guests, invite admin, start-up).
+- `css/phonodeck.css`: the styles.
+- `api/`: the optional invite server for Vercel.
 
 ### Browsers
 | Browser | Typing | Dictation | Save to folder |

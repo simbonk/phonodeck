@@ -1,0 +1,122 @@
+:root{--bg:#0b0f14;--panel:#121923;--line:#223042;--fg:#d7e2ee;--dim:#8497ab;--accent:#4fd1c5;--you:#1d2b3c;--warn:#f6c667;--magic:#ffd36b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+#app{display:flex;flex-direction:column;height:100%;max-width:900px;margin:0 auto}
+header{display:flex;gap:10px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0;color:var(--accent);letter-spacing:.08em}
+/* the story name gives way; the timer pill (time left, +10) never does, and a thin bar along the header fills as the session runs */
+header{position:relative}
+#brand{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px}
+#advTitle{color:var(--dim);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clock{flex:none;display:flex;align-items:stretch;border:1.5px solid var(--accent);border-radius:999px;overflow:hidden;color:var(--accent)}
+#advLeft{padding:4px 12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+#clock #moreTime{border:0;border-left:1.5px solid var(--accent);border-radius:0;margin:0;padding:4px 10px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700}
+#clock.low{border-color:var(--warn);color:var(--warn)} #clock.low #moreTime{border-color:var(--warn);color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+#timeBar{position:absolute;left:0;right:0;bottom:-1px;height:3px} #timeBar div{height:100%;width:0;background:var(--accent);transition:width 1s} #clock.low~#timeBar div{background:var(--warn)}
+/* phones: the story name sits under the PHONODECK logo, leaving the timer room */
+@media (max-width:600px){header{gap:8px}#brand{flex-direction:column;align-items:flex-start;gap:0}header h1{font-size:16px;line-height:1.2}#advTitle{font-size:13px;line-height:1.3;max-width:100%}#advLeft{font-size:15px;padding:4px 10px}.wide{display:none}}
+select,input,textarea,button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+button{cursor:pointer}button:hover{border-color:var(--accent)}button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--accent);color:#012;border-color:var(--accent);font-weight:600}
+nav{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;background:transparent;color:var(--dim);border-radius:6px}
+nav button.on{color:var(--accent);background:var(--panel)}
+main{flex:1;overflow:auto;padding:12px 10px}
+.tab{display:none}.tab.on{display:block}
+.msg{padding:10px 12px;border-radius:10px;margin:0 0 10px;white-space:pre-wrap;word-wrap:break-word}
+.gm{background:var(--panel);border:1px solid var(--line)}
+.pl{background:var(--you);margin-left:12%}
+.sys{color:var(--dim);font-style:italic;text-align:center}
+#composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+#composer textarea{flex:1;resize:none;height:44px;max-height:140px}
+/* phones: the reply box gets its own full-width row, with the buttons underneath */
+@media (max-width:600px){#composer{flex-wrap:wrap}#composer textarea{flex:1 1 100%;height:64px;font-size:16px}#composer #micBtn{flex:1}#composer #send{flex:0 0 30%}}
+pre{white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.card b{color:var(--accent)} .tag{color:var(--dim);font-size:13px}
+label{display:block;margin:10px 0 4px;color:var(--dim);font-size:14px}
+.row input{width:100%}
+.warn{color:var(--warn);font-size:13px}
+textarea#bibleEdit{width:100%;min-height:50vh;overflow:hidden;resize:none}   /* grows with its text, so only the page scrolls */
+/* overlays */
+.overlay{position:fixed;inset:0;background:var(--bg);z-index:10;overflow:auto;display:none;padding:24px 16px}
+.overlay.on{display:block}
+body.guest .hostOnly{display:none!important} .guestOnly{display:none} body.guest .guestOnly{display:block}
+.adm{width:100%;border-collapse:collapse;font-size:13px} .adm td,.adm th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top} .adm button{padding:3px 8px;margin:1px}
+.box{max-width:640px;margin:0 auto}
+.why{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:10px 0}.why summary{cursor:pointer;color:var(--accent)}.why p,.why li{font-size:15px}
+.box h1{color:var(--accent);letter-spacing:.12em;margin:10px 0 4px}
+.big{display:block;width:100%;text-align:left;padding:16px;margin:12px 0;font-size:18px}
+.big small{display:block;color:var(--dim);font-size:14px}.big.primary small{color:#023;opacity:.8}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border-radius:999px;padding:6px 12px;font-size:14px}
+/* the experience picker: building your own world is the big card; the curated experiences are smaller cards under it */
+#pickBuild{border:2px solid var(--accent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 35%,transparent);font-weight:700}
+#pickBuild small{font-weight:400} #pickBuild.primary small{color:#023}
+#presetChips{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.xp{text-align:left;border-radius:10px;padding:10px 12px;font-weight:600} .xp small{display:block;font-weight:400;color:var(--dim);font-size:13px;margin-top:2px}
+.xp.sel{background:var(--accent);color:#012;border-color:var(--accent)} .xp.sel small{color:#023}
+/* the narrator voices: two columns of cards (women, men); tap one to hear it */
+#curVoice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#curVoice .tag{grid-column:span 1}
+.vc{text-align:left;border-radius:10px;padding:10px 12px;font-weight:700} .vc small{display:block;font-weight:400;color:var(--dim);font-size:13px}
+.vc.sel{background:var(--accent);color:#012;border-color:var(--accent)} .vc.sel small{color:#023}
+.chip.sel{background:var(--accent);color:#012;border-color:var(--accent)}
+.bar{height:6px;background:var(--panel);border-radius:3px;margin:8px 0 18px}
+.bar div{height:100%;background:var(--accent);border-radius:3px;transition:width .2s}
+#curQ{font-size:22px;margin:6px 0}
+#curA{width:100%;min-height:90px}
+.nav2{display:flex;gap:8px;margin-top:14px}.grow{flex:1}
+.advrow{display:flex;gap:8px;align-items:stretch}.advrow .big{flex:1}.advrow .side{margin:12px 0}
+.quest{position:relative;margin:8px 0 8px 12px;padding-left:22px;border-left:2px solid var(--line)}
+.quest .q{position:relative;margin:0 0 14px}
+.quest .q::before{content:"";position:absolute;left:-30px;top:5px;width:14px;height:14px;border-radius:50%;background:var(--bg);border:2px solid var(--dim)}
+.quest .q.done::before{background:var(--accent);border-color:var(--accent)}
+.quest .q.active::before{border-color:var(--accent);box-shadow:0 0 8px var(--accent)}
+.quest .q.done{color:var(--dim);text-decoration:line-through}
+h3{margin:18px 0 8px;color:var(--accent);font-size:15px;letter-spacing:.05em}
+.recap{border:1px dashed var(--accent);color:var(--dim);font-style:italic;background:transparent}
+#micBtn{padding:8px 14px;border:2px solid var(--accent);color:var(--accent);font-weight:700;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
+#micBtn.rec{background:#c0392b;border-color:#c0392b;color:#fff;box-shadow:none;animation:rec 1s infinite}
+@keyframes rec{0%,100%{opacity:1}50%{opacity:.55}}
+/* a sheen sweeps across Hands-free so it stands out until you use it */
+#micBtn:not(.rec){background-image:linear-gradient(110deg,transparent 30%,color-mix(in srgb,var(--accent) 40%,transparent) 50%,transparent 70%);background-size:250% 100%;background-repeat:no-repeat;animation:shimmer 2.8s ease-in-out infinite}
+@keyframes shimmer{0%{background-position:150% 0}60%,100%{background-position:-50% 0}}
+/* the two play modes: equal cards, curated story a touch bigger */
+#curChips.modes{flex-direction:column;gap:12px}
+#curChips.modes .chip{border-radius:10px;border:2px solid var(--accent);padding:14px 16px;font-size:17px;font-weight:700;text-align:left;width:100%}
+#curChips.modes .chip small{display:block;font-weight:400;font-size:14px;color:var(--dim);margin-top:2px}
+#curChips.modes .chip:first-child{padding:20px 16px;font-size:20px}
+#curChips.modes .chip.sel small{color:#023}
+@media (prefers-reduced-motion:reduce){#micBtn:not(.rec){animation:none}}
+.msg.gm{cursor:pointer}
+/* "The phonodeck is thinking": a holographic core spins beside the timer */
+.msg.thinking{display:flex;flex-direction:column;align-items:center;gap:6px}
+.holo{flex:none;overflow:visible;filter:drop-shadow(0 0 4px color-mix(in srgb,var(--accent) 70%,transparent))}
+.holo circle{fill:none;stroke:var(--accent);stroke-width:1.5;transform-origin:20px 20px} .holo .h3 circle,.holo .h4{fill:var(--accent);stroke:none}
+.holo .h1{animation:hspin 3.2s linear infinite} .holo .h2{opacity:.65;animation:hspin 2.1s linear infinite reverse}
+.holo .h3{transform-origin:20px 20px;animation:hspin 1.4s linear infinite} .holo .h4{animation:hpulse 1.6s ease-in-out infinite}
+@keyframes hspin{to{transform:rotate(360deg)}}
+@keyframes hpulse{0%,100%{transform:scale(.7);opacity:.55}50%{transform:scale(1.15);opacity:1}}
+@media (prefers-reduced-motion:reduce){.holo .h1,.holo .h2,.holo .h3{animation-duration:12s}}
+.mini{padding:2px 8px;font-size:13px;margin-right:4px}
+.lf input,.lf select,.lf textarea{width:100%;margin-bottom:6px}
+#undoBtn{padding:8px 12px}
+.subnav{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+.subnav button{border-radius:999px;padding:6px 14px;font-size:14px;color:var(--dim)}
+.subnav button.on{background:var(--accent);color:#012;border-color:var(--accent)}
+.sp{display:none}.sp.on{display:block}
+.grp{border:1px solid var(--line);border-radius:10px;padding:2px 12px 12px;margin:0 0 14px}
+.grp>b{display:block;margin-top:10px;color:var(--accent);font-size:13px;letter-spacing:.06em}
+.chip.ai{border-style:dashed}
+button.busy{animation:rec 1.2s infinite;cursor:progress}
+#curMsg{font-size:15px;color:var(--fg)}
+.grade{font-size:56px;font-weight:700;color:var(--accent);line-height:1}
+#finale ul{margin:4px 0 10px;padding-left:20px}
+/* hands-free send phrase: every letter glows and bobs in a wave so nobody misses it */
+#voiceStatus.listen{font-size:15px;text-align:center;color:var(--fg);padding:8px 10px!important}
+.magic{display:inline-block;font-weight:700;white-space:nowrap;margin:0 2px}
+.magic span{display:inline-block;color:var(--magic);animation:hwave 1.4s ease-in-out infinite,hglow 1.4s ease-in-out infinite}
+@keyframes hwave{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes hglow{0%,100%{text-shadow:0 0 3px var(--magic)}50%{text-shadow:0 0 10px var(--magic),0 0 22px var(--magic)}}
+@media (prefers-reduced-motion:reduce){.magic span{animation:hglow 2s ease-in-out infinite}}
