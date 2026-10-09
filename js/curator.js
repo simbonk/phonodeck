@@ -443,7 +443,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     (made.places || []).forEach(p => addPlace(a, p)); (made.links || []).forEach(l => Array.isArray(l) && l.length === 2 && addEdge(a, l[0], l[1]));
     if (a.location) { const k = addPlace(a, a.location); a.places[k].visits = 1; }
     if (!sim) (made.beats || []).forEach(b => b && b.beat && a.beats.push({ beat: b.beat, status: b.status || 'upcoming' }));
-    if (made.voice || made.secrets) a.gm = { voice: made.voice || '', secrets: made.secrets || [], threads: made.threads || [], big_reveal: made.big_reveal || '', cast: made.cast || [] };
+    if (made.voice || made.secrets) a.gm = { voice: made.voice || '', secrets: made.secrets || [], threads: made.threads || [], big_reveal: made.big_reveal || '', cast: capCast(made.cast, M) };
     (made.lore || []).forEach(e => {
       if (!e.name) return; const k = e.name.toLowerCase(), old = a.lore[k]; if (old && old.byPlayer) return;
       a.lore[k] = { name: e.name, type: e.type || (old && old.type) || 'other', desc: e.desc || (old && old.desc) || '', aliases: [...new Set([...((old && old.aliases) || []), ...(e.aliases || [])])], lastSeen: 0 };

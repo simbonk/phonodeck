@@ -38,11 +38,15 @@ function modeRules(a) {
 // two people besides the player, 30 minutes and more three, plus one named antagonist either way. Everyone else is known by their role
 // (the pilot, the conductor) until the player asks their name, and the named ones arrive one at a time.
 const namedCap = minutes => (+minutes || 30) >= 30 ? 3 : 2;
+// The models still squeeze in extra names when asked nicely, so the planned cast is also cut in code to the limit plus the antagonist,
+// and every turn the Game Master is told exactly which names exist.
+const capCast = (cast, minutes) => (Array.isArray(cast) ? cast : []).slice(0, namedCap(minutes) + 1);
 
-function castRules(minutes) {
+function castRules(minutes, names) {
   const n = namedCap(minutes);
   return `## NAMED CHARACTERS (the story is heard, not read: too many names at once is confusing)
-- At most ${n} named characters besides the player, plus one named antagonist if the story has one. These are the main cast in the bible; do not name anyone else.
+- At most ${n} named characters besides the player, plus one named antagonist if the story has one. These are the main cast in the bible; do not name anyone else. Named animals and robots count toward the limit.${names && names.length ? `
+- The named cast is fixed: ${names.join(', ')}. Nobody else gets a name, even someone mentioned in the bible or lore, unless the player asks for it: everyone else stays a role ("the pilot").` : ''}
 - Everyone else is known only by what they are: "the pilot", "the conductor", "the woman selling oranges". They can speak and matter, but they have no name. If the player asks someone's name or introduces themselves to them, that person may give one, and from then on it is part of the world.
 - Introduce named characters one at a time: at most one new named character per reply, and never all of them in the same scene. Let the player get to know one before the next arrives, and space their first appearances across the story.
 - When a named character first appears, introduce them as a gifted author would: two or three specific, telling details (how they hold themselves, something about their hands or clothes, what they carry, the sound of their voice) that show who they are. Never an inventory of hair, eyes and height.`;

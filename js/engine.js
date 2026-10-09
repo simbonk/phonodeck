@@ -105,7 +105,7 @@ async function takeTurn(input, hidden, onDelta) {
   // message, then the conversation; only the last message changes every turn. It carries this turn's private briefing (map, recalled
   // memories, director notes, hand changes) followed by the player's action, and is not stored, so earlier turns stay byte-for-byte identical.
   const me = Object.values(a.lore).find(e => e.isPlayer);
-  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + '\n\n' + castRules(a.minutes) + (me && me.name !== 'You' ? '\n\nTHE PLAYER CHARACTER is ' + me.name + ', and that is "you": narrate everything they do and feel as "you"; the name ' + me.name + ' appears only in other characters\' dialogue.' : '') + '\n\n' + feelingRules(a) + '\n\n' + modeRules(a) + (a.age ? '\n\n' + ageRules(a) : '') + '\n\n## STORY BIBLE\n' + a.bible +
+  const system = GM_RULES + (isShort(a) ? '\n' + shortRules(a) : '') + '\n\n' + castRules(a.minutes, ((a.gm && a.gm.cast) || []).map(c => c && c.name).filter(Boolean)) + (me && me.name !== 'You' ? '\n\nTHE PLAYER CHARACTER is ' + me.name + ', and that is "you": narrate everything they do and feel as "you"; the name ' + me.name + ' appears only in other characters\' dialogue.' : '') + '\n\n' + feelingRules(a) + '\n\n' + modeRules(a) + (a.age ? '\n\n' + ageRules(a) : '') + '\n\n## STORY BIBLE\n' + a.bible +
     (a.photo && a.photo.canvas ? "\n\n## THE WORLD AS PAINTED FROM THE PLAYER'S PHOTO (keep it faithful)\n" + a.photo.canvas : '') +
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
@@ -293,7 +293,7 @@ async function makeGmNotes(a, revise) {
     '\nEverything should serve the FEELING TO ACHIEVE: ' + feelingOf(a) + '.' },
     { role: 'user', content: (revise ? 'CURRENT NOTES:\n' + gmText(a) + '\n\n' : '') + ctx }]);
   const g = parseJson(raw);
-  if (g && (g.voice || g.secrets)) a.gm = { voice: g.voice || '', secrets: g.secrets || [], threads: g.threads || [], big_reveal: g.big_reveal || '', cast: g.cast || [] };
+  if (g && (g.voice || g.secrets)) a.gm = { voice: g.voice || '', secrets: g.secrets || [], threads: g.threads || [], big_reveal: g.big_reveal || '', cast: capCast(g.cast, a.minutes) };
 }
 function humourFor(f) {   // { p: chance a reply is asked for humour, kinds: which kinds }
   if (/connect|love|romanc/i.test(f)) return { p: 0.3, kinds: GENTLE_HUMOR };
