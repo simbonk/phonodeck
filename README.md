@@ -104,5 +104,7 @@ The `api` folder holds three small Vercel functions with no dependencies. `api/g
 
 Got an idea or found a bug? [Open an issue](https://github.com/simbonk/phonodeck/issues/new/choose) and pick Idea or Bug. No code needed. To build something yourself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+To get in touch directly: [phonodeck.help@gmail.com](mailto:phonodeck.help@gmail.com).
+
 ## License
 MIT. See `LICENSE`.
