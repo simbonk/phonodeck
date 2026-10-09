@@ -11,7 +11,7 @@ const isSim = a => !!a && a.mode === 'sim';
 function minutesOf(t) {   // "20 minutes", "1 hour", "90 min", "2 hours (an epic)"; default 30
   t = String(t || ''); const h = /(\d+(?:\.\d+)?)\s*(h|hr|hour)/i.exec(t), m = /(\d+)/.exec(t);
   const v = h ? +h[1] * 60 : m ? +m[1] : (/\bhour\b/i.test(t) ? 60 : 30);
-  return Math.max(5, Math.min(240, Math.round(v)));
+  return Math.max(5, Math.min(600, Math.round(v)));
 }
 function turnSecs(a) {   // median of your last few turns, once there are enough of them
   const t = (a.turnTimes || []).slice(-6); if (t.length < 2) return SEC_PER_TURN;
@@ -66,6 +66,9 @@ function mapText(a) {
   return s;
 }
 const loreLine = e => 'LORE ' + e.name + ' (' + e.type + '): ' + e.desc;
+// True when the entry's name or an alias appears in the text as a whole word: "Ash" in "Ash's boat" but not in "ashes" or "crash".
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const namedIn = (text, e) => [e.name, ...(e.aliases || [])].map(n => String(n || '').trim()).filter(Boolean).some(n => new RegExp('(^|[^\\p{L}\\p{N}])' + reEsc(n) + '(?![\\p{L}\\p{N}])', 'iu').test(text));
 
 function addPlace(a, name) {
   name = String(name || '').trim(); if (!name) return null;
@@ -122,7 +125,7 @@ async function takeTurn(input, hidden, onDelta) {
   memoryJob = (async () => {
     try {
       // Lore entries named in this exchange are sent along, so the memory call can update them (living lore) without another request.
-      const said = (input + ' ' + reply).toLowerCase(), known = Object.values(a.lore).filter(e => [e.name, ...(e.aliases || [])].filter(Boolean).some(n => said.includes(n.toLowerCase()))).slice(0, 12);
+      const said = input + ' ' + reply, known = Object.values(a.lore).filter(e => namedIn(said, e)).sort((x, y) => (y.lastSeen || 0) - (x.lastSeen || 0)).slice(0, 12);
       const ex = await chat('extract', [{ role: 'system', content: extractRules(a) },
         { role: 'user', content: (changes.length ? 'PLAYER CHANGES (authoritative; update any affected entries to match them):\n' + changes.map(c => '- ' + c.text).join('\n') + '\n' : '') + 'FEELING TO ACHIEVE: ' + feelingOf(a) + '\nKnown location: ' + a.location +
           (isSim(a) ? "\nPlayer's goal: " + (goalOf(a) || '(open)') : '\nCurrent beats:\n' + (a.beats.filter(b => b.status !== 'done').slice(-12).map(b => '- [' + b.status + '] ' + b.beat).join('\n') || '(none)')) +
@@ -133,7 +136,8 @@ async function takeTurn(input, hidden, onDelta) {
     if (db.current === name) { renderMap(); if (!loreEditing) renderLore(); }
   })();
   // Slow housekeeping (bible refresh, GM notes, chapter summaries) runs in the background and never blocks the next turn.
-  slowJob = memoryJob.then(async () => {
+  // Chained after the previous housekeeping too: two overlapping runs (a slow or rate-limited model) would summarise the same chapter twice.
+  slowJob = Promise.all([memoryJob, slowJob.catch(() => {})]).then(async () => {
     if (!hidden && tr.filter(t => t.role === 'player').length % BIBLE_EVERY === 0) { try { await refreshBible(a); } catch (e) { console.warn(e); } }
     // GM notes are also revised after a hand edit, so the cast agendas stop describing the old version (e.g. old pronouns).
     try { if (!a.gm) await makeGmNotes(a); else if (a.notesStale || (!hidden && tr.filter(t => t.role === 'player').length % BIBLE_EVERY === 0)) { await makeGmNotes(a, true); a.notesStale = false; } } catch (e) { console.warn('GM notes skipped', e); }
@@ -206,9 +210,9 @@ function wishesSection(a) {
 }
 
 // ---------------- Embeddings + hybrid recall ----------------
-let embedOff = false;                                   // set for the session if the endpoint rejects embeddings
+let embedOff = false, embedPause = 0, embedFails = 0;   // off for the session if the key cannot embed; a passing error (rate limit, busy, network) only pauses semantic recall
 const embedModel = () => guest() ? GEMINI.embed : S().embed !== undefined ? S().embed : GEMINI.embed;
-const embOn = () => !embedOff && !S().noEmbed && (!!S().fake || !!embedModel());
+const embOn = () => !embedOff && Date.now() >= embedPause && !S().noEmbed && (!!S().fake || !!embedModel());
 function hstr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 function quant(v) { const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1; return v.map(x => Math.round(x / n * 127)); }   // int8-ish, keeps storage small
 function fakeEmb(t) { const v = new Array(64).fill(0); tok(t).forEach(w => v[Math.abs(hstr(w)) % 64]++); return quant(v); }
@@ -217,14 +221,18 @@ async function embed(texts) {
   if (!hasKey()) throw new Error('no API key');
   const model = embedModel(); if (!model) throw new Error('no embedding model');
   const r = await netFetch(apiUrl('embed'), { method: 'POST', headers: headers(), body: JSON.stringify({ model, input: texts }) });
-  if (!r.ok) throw new Error('embeddings HTTP ' + r.status);
+  if (!r.ok) { const e = new Error('embeddings HTTP ' + r.status); e.status = r.status; throw e; }
   return (await r.json()).data.map(d => quant(d.embedding.slice(0, 256)));   // truncate long vectors (e.g. Gemini's 3072 dims) to keep storage small
+}
+function embedFailed(e) {   // 1, 2, 4, 8 minutes without semantic recall, then off for the session; a key that cannot embed at all is off at once
+  if ([401, 403, 404].includes(e.status) || ++embedFails >= 5) { embedOff = true; console.warn('embeddings disabled for this session:', e.message); }
+  else { embedPause = Date.now() + 60000 * 2 ** (embedFails - 1); console.warn('embeddings paused after an error:', e.message); }
 }
 function cosine(a, b) { let d = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return d / (Math.sqrt(x * y) || 1); }
 
 async function retrieve(a, input, recentStart) {
-  const low = input.toLowerCase(), hits = [];
-  Object.values(a.lore).forEach(e => { if ([e.name, ...(e.aliases || [])].filter(Boolean).some(n => low.includes(n.toLowerCase()))) hits.push(loreLine(e)); });
+  const hits = [];
+  Object.values(a.lore).forEach(e => { if (namedIn(input, e)) hits.push(loreLine(e)); });
   const docs = [];
   Object.entries(a.lore).forEach(([k, e]) => docs.push({ id: 'L:' + k, text: loreLine(e), t: tok(e.name + ' ' + (e.aliases || []).join(' ') + ' ' + e.desc) }));
   a.transcript.slice(0, recentStart).forEach(t => docs.push({ id: 'T:' + t.n, text: 'T' + t.n + ' ' + t.role + ': ' + t.text, t: tok(t.text) }));
@@ -239,12 +247,12 @@ async function retrieve(a, input, recentStart) {
       const model = S().fake ? 'fake' : embedModel();
       const sig = d => model + ':' + hstr(d.text);
       const need = docs.filter(d => !a.emb[d.id] || a.emb[d.id].s !== sig(d)).slice(0, 96);
-      if (need.length) embed(need.map(d => d.text.slice(0, 2000))).then(vs => { need.forEach((d, i) => a.emb[d.id] = { s: sig(d), v: vs[i] }); persist(); })
-        .catch(e => { console.warn('embedding backfill failed:', e.message); embedOff = true; });   // background: never delay the reply
+      if (need.length) embed(need.map(d => d.text.slice(0, 2000))).then(vs => { need.forEach((d, i) => a.emb[d.id] = { s: sig(d), v: vs[i] }); embedFails = 0; persist(); })
+        .catch(embedFailed);   // background: never delay the reply
       const [qv] = await Promise.race([embed([query.slice(0, 2000)]), new Promise(res => setTimeout(() => res([null]), 1000))]);   // skip semantic recall if slow
       if (qv) sem = docs.filter(d => a.emb[d.id] && a.emb[d.id].v.length === qv.length)
         .map(d => ({ d, s: cosine(qv, a.emb[d.id].v) })).filter(x => x.s > 0.2).sort((x, y) => y.s - x.s).slice(0, 12).map(x => x.d);
-    } catch (e) { console.warn('embeddings disabled for this session:', e.message); embedOff = true; }
+    } catch (e) { embedFailed(e); }
   }
   const score = new Map();   // reciprocal rank fusion of keyword + semantic rankings
   [lex, sem].forEach(list => list.forEach((d, i) => score.set(d, (score.get(d) || 0) + 1 / (60 + i))));
