@@ -119,10 +119,10 @@
     <div id="timeBar"><div></div></div>
   </header>
   <nav id="tabs">
-    <button data-t="story" class="on">Story</button>
+    <button data-t="story" class="on">Play</button>
     <button data-t="map">Mission</button>
-    <button data-t="bible">Bible</button>
-    <button data-t="lore">Lore</button>
+    <button data-t="bible">Story</button>
+    <button data-t="lore">World</button>
     <button data-t="settings">Settings</button>
   </nav>
   <main>
@@ -131,7 +131,7 @@
     <div id="bible" class="tab">
       <div id="biblePhoto"></div>
       <textarea id="bibleEdit"></textarea><br><br>
-      <button id="saveBible" class="primary">Save bible</button> <span id="bibleStatus" class="tag"></span>
+      <button id="saveBible" class="primary">Save story</button> <span id="bibleStatus" class="tag"></span>
       <span class="tag"> Edit by hand any time. Your changes win over anything the story said before, from your next message on. The AI refreshes it every 10 turns and keeps your Player's Wishes (including the feeling to achieve and your goal).</span>
     </div>
     <div id="lore" class="tab"></div>
@@ -1256,7 +1256,7 @@ $('lore').onclick = e => {
   else if (act === 'cancel') { loreEditing = null; renderLore(); }
   else if (act === 'save') saveLore(k);
   else if (act === 'merge') mergeLore(k);
-  else if (act === 'del') { if (confirm('Delete "' + a.lore[k].name + '" from the lorebook?')) { delete a.lore[k]; persist(); renderMap(); renderLore(); } }
+  else if (act === 'del') { if (confirm('Delete "' + a.lore[k].name + '" from the world?')) { delete a.lore[k]; persist(); renderMap(); renderLore(); } }
 };
 
 // ---------------- Session recap ----------------
