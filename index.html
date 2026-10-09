@@ -64,6 +64,16 @@
   #micBtn{padding:8px 14px;border:2px solid var(--accent);color:var(--accent);font-weight:700;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
   #micBtn.rec{background:#c0392b;border-color:#c0392b;color:#fff;box-shadow:none;animation:rec 1s infinite}
   @keyframes rec{0%,100%{opacity:1}50%{opacity:.55}}
+  /* a sheen sweeps across Hands-free so it stands out until you use it */
+  #micBtn:not(.rec){background-image:linear-gradient(110deg,transparent 30%,color-mix(in srgb,var(--accent) 40%,transparent) 50%,transparent 70%);background-size:250% 100%;background-repeat:no-repeat;animation:shimmer 2.8s ease-in-out infinite}
+  @keyframes shimmer{0%{background-position:150% 0}60%,100%{background-position:-50% 0}}
+  /* the two play modes: equal cards, curated story a touch bigger */
+  #curChips.modes{flex-direction:column;gap:12px}
+  #curChips.modes .chip{border-radius:10px;border:2px solid var(--accent);padding:14px 16px;font-size:17px;font-weight:700;text-align:left;width:100%}
+  #curChips.modes .chip small{display:block;font-weight:400;font-size:14px;color:var(--dim);margin-top:2px}
+  #curChips.modes .chip:first-child{padding:20px 16px;font-size:20px}
+  #curChips.modes .chip.sel small{color:#023}
+  @media (prefers-reduced-motion:reduce){#micBtn:not(.rec){animation:none}}
   .msg.gm{cursor:pointer}
   .mini{padding:2px 8px;font-size:13px;margin-right:4px}
   .lf input,.lf select,.lf textarea{width:100%;margin-bottom:6px}
@@ -1957,7 +1967,8 @@ function curRender() {
   $('curA').value = (q.depth ? cur.answers.describe : cur.answers[q.id]) || ''; $('curA').placeholder = q.ph || 'Type your own answer, or tap options above...';
   $('curSuggestRow').style.display = q.suggest ? '' : 'none'; if (q.suggest) { $('curSuggest').textContent = q.suggest; busyBtn($('curSuggest')); }
   if (q.suggest) $('curSuggestRow').after($('curChips')); else $('curHint').after($('curChips'));   // suggestions appear under the box they help with
-  $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('');
+  const modes = q.id === 'mode'; $('curChips').classList.toggle('modes', modes);   // the play modes show as two cards: name, then what it means
+  $('curChips').innerHTML = chipsOf(q).map(c => '<button class="chip" data-c="' + esc(c) + '">' + (modes ? esc(c).replace(/ \((.*)\)$/, '<small>$1</small>') : esc(c)) + '</button>').join('');
   if (cur.extra[q.id]) addExtraChips(cur.extra[q.id]); else wireChips();
   $('curBack').disabled = cur.i === 0;
   curNextLabel();
