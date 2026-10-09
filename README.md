@@ -15,14 +15,14 @@ A single-file, AI-run text adventure powered by Google Gemini. Say how much time
 - **About you, and an age-appropriate story:** question 4 asks your name and age (and, for adults only, romance). A 10-year-old gets a G-rated, simple, playful story with no romance; teenagers get PG; adults get references pitched to their generation.
 - **Quick start or deep set-up:** question 5 has two big buttons: Quick start shows a box to describe what you want, and Create starts the game; Deep set-up goes straight on to an optional photo and the detailed questions, whose suggestions follow your earlier answers (children get their own options).
 - **Paint the world from a photo:** upload a picture and the phonodeck works out the place, the time and the people, writes a detailed description of the world, adds lore, and fills in the rest of the questions.
-- **Living lore:** when something changes in play (a relationship, a location, a secret revealed), the lore entry is updated, with earlier versions kept in the Lore tab. It rides on the existing memory call, so it costs no extra requests.
+- **Living lore:** when something changes in play (a relationship, a location, a secret revealed), the lore entry is updated, with earlier versions kept in the World tab. It rides on the existing memory call, so it costs no extra requests.
 - **Short sessions that read like short stories:** 15 minutes or less is told clean and simple (one goal, a small cast, a payoff ending), and its suggested settings stay on Earth in familiar times.
 - **Same cast, new story:** after a story you love, start a sequel, a "years later", a fresh start or a prequel with the same characters and world.
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
 - **Report card:** two grades from a discerning high school teacher: *How the Phonodeck did* (did it deliver the feeling and your goals?) and *How you did* (your own choices and play).
 - **Hands-free voice:** dictation (say *make it so* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
-- **You stay in control:** edit the bible and lore mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
+- **You stay in control:** edit the Story and World tabs mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
 ## Quick start
 1. Get a Gemini API key at https://aistudio.google.com/apikey and set up billing for it (a small prepaid balance works).
