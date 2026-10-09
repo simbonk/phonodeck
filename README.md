@@ -2,7 +2,7 @@
 
 *The precursor to the holodeck.*
 
-A single-file, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
+A no-build, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
 
 <!-- Add a screenshot here: ![Phonodeck](screenshot.png) -->
 
@@ -38,6 +38,18 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 ### Running it
 - **Hosted:** push to a GitHub repo, and enable *Settings > Pages* (deploy from the main branch). Share the link; every player brings their own key.
 - **Locally:** from the folder, run `python3 -m http.server 8080` and open `http://localhost:8080/`. (Opening the file directly works, but browsers then re-ask for microphone permission every time.)
+
+### Where things live
+No build step: `index.html` is the page, and it loads plain scripts in order, all sharing one global scope.
+- `js/prompts.js`: every instruction the models receive (Game Master, architect, showrunner, director, memory, photo, report card). Tune the storytelling here.
+- `js/experiences.js`: the curated experiences in the set-up. Add an object to `PRESETS` to add one.
+- `js/core.js`: start-up state, invites, saving, model calls, the cost meter and retrieval.
+- `js/engine.js`: the story engine (clock, a turn of play, memory, recall, showrunner and director, chapters, undo, lore editor).
+- `js/voice.js`: speech in and out (Gemini narrator, browser voice, voice tests, thinking sound, hands-free).
+- `js/curator.js`: the set-up wizard, the photo reader, world creation, short stories and the report card.
+- `js/ui.js`: screens and controls (start screen, story view, settings, guests, invite admin, start-up).
+- `css/phonodeck.css`: the styles.
+- `api/`: the optional invite server for Vercel.
 
 ### Browsers
 | Browser | Typing | Dictation | Save to folder |
