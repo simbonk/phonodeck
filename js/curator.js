@@ -336,7 +336,11 @@ async function curAdvance() {
 // The architect's reply is one JSON object written in a fixed order (see CREATE_RULES), and it is streamed, so each stage lights up when the
 // model really starts writing that part. Nothing here is a timed fake (except the offline demo, which has no architect to follow).
 const FORGE = [
-  { t: 'Reading your wishes', why: ['Your feeling becomes the goal of everything that follows.', 'Every answer you gave is shaping this world.', 'No two worlds are ever the same.', 'The best worlds take a moment of thought.'] },
+  { t: 'Reading your wishes', why: [   // the longest wait, so a dozen lines (about 48 seconds) before any repeats
+    'Your feeling becomes the goal of everything that follows.', 'Every answer you gave is shaping this world.', 'No two worlds are ever the same.',
+    'The best worlds take a moment of thought.', 'Somewhere, a stranger is getting a name.', 'Choosing where your story begins.',
+    'Weighing how much danger your feeling can bear.', 'Every character will want something.', 'Hiding a few surprises for later.',
+    'Picking the sounds and smells of this place.', 'Making room for you to wander off the path.', 'Planning an ending worth reaching.'] },
   { t: 'Building the story', keys: ['bible'], why: 'A story bible, written for you alone.' },
   { t: 'Mapping the world', keys: ['location', 'places', 'links', 'beats'], why: 'Places to wander, and your first steps.' },
   { t: 'Establishing characters and lore', keys: ['player', 'lore'], why: 'A world that remembers everyone you meet.' },
