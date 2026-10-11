@@ -179,7 +179,7 @@ async function send() {
   const speaker = (S().speak && (TTS || useGemini())) ? makeSpeaker(() => { stopAmbient(); if (handsActive) setTimeout(listen, 300); }) : null;
   let bubble = null, streamed = '';
   const onDelta = d => {
-    if (!bubble) { stopWait(); console.log('first token after ' + (Date.now() - t0) + ' ms'); wait.remove(); bubble = addMsg('gm', ''); }
+    if (!bubble) { stopWait(); console.log('first token after ' + (Date.now() - t0) + ' ms'); wait.remove(); bubble = addMsg('gm', ''); forgeClose(); }   // a new world's build screen gives way to its first words
     streamed += d; bubble.innerHTML = md(streamed); fitLast();
     if (speaker) speaker.push(d);
   };

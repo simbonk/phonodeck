@@ -120,3 +120,31 @@ button.busy{animation:rec 1.2s infinite;cursor:progress}
 @keyframes hwave{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes hglow{0%,100%{text-shadow:0 0 3px var(--magic)}50%{text-shadow:0 0 10px var(--magic),0 0 22px var(--magic)}}
 @media (prefers-reduced-motion:reduce){.magic span{animation:hglow 2s ease-in-out infinite}}
+/* The build screen: a big holographic core, the experience's name condensing out of the glow, and a lit timeline of what is being made */
+#forge{transition:opacity .6s} #forge.out{opacity:0}
+#forge .box{max-width:520px;text-align:center;padding-top:4vh}
+#forgeCore .holo{width:120px;height:120px;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--accent) 80%,transparent)) drop-shadow(0 0 28px color-mix(in srgb,var(--accent) 35%,transparent))}
+.forgeTag{letter-spacing:.3em;margin-top:18px}
+#forgeName{font-size:26px;margin:6px 0 18px;color:var(--fg);letter-spacing:.04em;line-height:1.25}
+#forgeBar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin:0 0 22px}
+#forgeBar div{height:100%;width:0;transition:width 1.2s ease;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 40%,transparent),var(--accent),#e8fffc,var(--accent));background-size:200% 100%;animation:fshimmer 1.6s linear infinite;box-shadow:0 0 10px var(--accent)}
+@keyframes fshimmer{to{background-position:-200% 0}}
+#forgeSteps{list-style:none;margin:0;padding:0;text-align:left}
+#forgeSteps li{display:flex;gap:14px;position:relative;padding:0 0 16px;color:var(--dim);transition:color .5s}
+#forgeSteps li:not(:last-child)::before{content:'';position:absolute;left:6px;top:18px;bottom:-2px;width:2px;background:var(--line);transition:background .6s}
+#forgeSteps li.done::before{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+#forgeSteps i{flex:none;width:14px;height:14px;margin-top:5px;border-radius:50%;border:2px solid var(--line);transition:all .5s}
+#forgeSteps li.done i{background:var(--accent);border-color:var(--accent)}
+#forgeSteps li.now i{border-color:var(--accent);box-shadow:0 0 0 0 var(--accent);animation:fping 1.6s ease-out infinite}
+@keyframes fping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 70%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+#forgeSteps b{font-weight:600;display:block}
+#forgeSteps li.done b{color:var(--fg);font-weight:500}
+#forgeSteps li.now b{color:var(--accent);font-size:19px;text-shadow:0 0 12px color-mix(in srgb,var(--accent) 50%,transparent)}
+#forgeSteps p{margin:2px 0 0;font-size:14px} #forgeSteps .fwhy{color:var(--fg);opacity:.85} #forgeSteps .fwhy:empty,#forgeSteps .ffind:empty{display:none}
+#forgeSteps .ffind{color:var(--accent);font-size:13px;letter-spacing:.02em}
+#forgeTime{font-variant-numeric:tabular-nums}
+/* materializing text: each letter condenses out of a blur of light */
+.mw{display:inline-block;white-space:nowrap} .mw span{display:inline-block;opacity:0;animation:fmat .7s ease-out forwards}
+@keyframes fmat{0%{opacity:0;filter:blur(6px);transform:translateY(4px) scale(1.3);text-shadow:0 0 14px var(--accent)}60%{opacity:1;filter:blur(0);text-shadow:0 0 10px var(--accent)}100%{opacity:1;filter:none;transform:none}}
+@media (prefers-reduced-motion:reduce){.mw span{animation:fmatr .4s forwards} #forgeBar div,#forgeSteps li.now i{animation:none}}
+@keyframes fmatr{to{opacity:1}}
