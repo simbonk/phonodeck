@@ -65,10 +65,17 @@ function mapText(a) {
   s += 'Recent events:\n'; a.events.slice(-15).forEach(e => s += '- ' + e + '\n');
   return s;
 }
-const loreLine = e => 'LORE ' + e.name + ' (' + e.type + '): ' + e.desc;
-// True when the entry's name or an alias appears in the text as a whole word: "Ash" in "Ash's boat" but not in "ashes" or "crash".
+// A person whose name the player has not learned yet carries it hidden, with the role the story calls them by ("the old islander").
+const loreLine = e => 'LORE ' + e.name + ' (' + e.type + (e.hidden ? '; the player does not know this name yet and knows them only as "' + (e.role || 'a stranger') + '"' : '') + '): ' + e.desc;
+// True when the entry's name, an alias or its role appears in the text as a whole word: "Ash" in "Ash's boat" but not in "ashes" or "crash".
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const namedIn = (text, e) => [e.name, ...(e.aliases || [])].map(n => String(n || '').trim()).filter(Boolean).some(n => new RegExp('(^|[^\\p{L}\\p{N}])' + reEsc(n) + '(?![\\p{L}\\p{N}])', 'iu').test(text));
+const wordIn = (text, n, exact) => new RegExp('(^|[^\\p{L}\\p{N}])' + reEsc(n) + '(?![\\p{L}\\p{N}])', exact ? 'u' : 'iu').test(text);
+const namedIn = (text, e) => [e.name, ...(e.aliases || []), e.role].map(n => String(n || '').trim()).filter(Boolean).some(n => wordIn(text, n));
+// The hidden name counts as revealed once it is said in the story: the full name, or the first name ("Walter" for Walter Pruitt), matching
+// case, so a name that is also a word ("Grace") is not given away by "an unhurried grace".
+const TITLE = /^(the|captain|capt|commander|doctor|dr|mr|mrs|ms|miss|sir|lady|lord|inspector|father|mother|sister|brother|uncle|aunt|auntie|professor|prof|madame|monsieur)\.?$/i;
+const nameSaid = (text, e) => [e.name, String(e.name).split(/\s+/)[0]].filter(n => n.length > 2 && !TITLE.test(n)).some(n => wordIn(text, n, true));
+const hiddenPeople = a => Object.values(a.lore).filter(e => e.hidden && !e.isPlayer).sort((x, y) => (y.lastSeen || 0) - (x.lastSeen || 0)).slice(0, 10);
 
 function addPlace(a, name) {
   name = String(name || '').trim(); if (!name) return null;
@@ -99,7 +106,7 @@ async function takeTurn(input, hidden, onDelta) {
   const memList = (await retrieve(a, input, recentStart)).filter(x => !pinnedLines.includes(x));   // pinned entries are already in the prompt
   holoStage = 'waiting for the story model';
   const mem = memList.map(x => '- ' + x).join('\n') || '(none)';
-  const changes = liveChanges(a);
+  const changes = liveChanges(a), hidden_ = hiddenPeople(a);
   const chapters = (a.chunks || []).slice(-tune('chapters')).map(c => '- Turns ' + c.from + '-' + c.to + ': ' + c.text).join('\n') || '(none yet)';
   // Prompt order is deliberate, for Google's prompt cache: everything that rarely changes (rules, bible, chapters, GM notes) is the system
   // message, then the conversation; only the last message changes every turn. It carries this turn's private briefing (map, recalled
@@ -111,6 +118,7 @@ async function takeTurn(input, hidden, onDelta) {
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
     '\n\n## HOW EACH TURN ARRIVES\nThe latest message starts with a private GAME MASTER BRIEFING for this reply only (mission map, recalled memories, director notes, player changes), then the player\'s action. Follow the briefing, never mention or quote it, and reply to the action.';
   const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
+    (hidden_.length ? '\n\n## PEOPLE THE PLAYER DOES NOT KNOW BY NAME YET (see INTRODUCTIONS; use the role until the name is revealed)\n' + hidden_.map(e => '- "' + (e.role || 'a stranger') + '" is really ' + e.name).join('\n') : '') +
     (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '') +
     '\n[END OF BRIEFING]\n\n' + (hidden ? 'INSTRUCTION: ' : 'THE PLAYER: ') + input;
   const messages = [{ role: 'system', content: system }];
@@ -125,12 +133,16 @@ async function takeTurn(input, hidden, onDelta) {
   memoryJob = (async () => {
     try {
       // Lore entries named in this exchange are sent along, so the memory call can update them (living lore) without another request.
-      const said = input + ' ' + reply, known = Object.values(a.lore).filter(e => namedIn(said, e)).sort((x, y) => (y.lastSeen || 0) - (x.lastSeen || 0)).slice(0, 12);
+      // The people seen most recently come along too, even when unnamed in the text ("the man", "the old dog"), so the memory call can
+      // match a description to the entry it belongs to instead of starting a duplicate.
+      const said = input + ' ' + reply, byRecent = (x, y) => (y.lastSeen || 0) - (x.lastSeen || 0);
+      const named = Object.values(a.lore).filter(e => namedIn(said, e)).sort(byRecent).slice(0, 12);
+      const known = [...new Set([...named, ...Object.values(a.lore).filter(e => e.type === 'person' && !e.isPlayer).sort(byRecent).slice(0, 6)])];
       const ex = await chat('extract', [{ role: 'system', content: extractRules(a) },
         { role: 'user', content: (changes.length ? 'PLAYER CHANGES (authoritative; update any affected entries to match them):\n' + changes.map(c => '- ' + c.text).join('\n') + '\n' : '') + 'FEELING TO ACHIEVE: ' + feelingOf(a) + '\nKnown location: ' + a.location +
           (isSim(a) ? "\nPlayer's goal: " + (goalOf(a) || '(open)') : '\nCurrent beats:\n' + (a.beats.filter(b => b.status !== 'done').slice(-12).map(b => '- [' + b.status + '] ' + b.beat).join('\n') || '(none)')) +
-          '\nKNOWN LORE (entries named in this exchange):\n' + (known.map(loreLine).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
-      applyExtraction(a, ex);
+          '\nKNOWN LORE (entries named in this exchange, and the people seen most recently; the id is in brackets):\n' + (known.map(e => '[' + e.id + '] ' + loreLine(e)).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
+      applyExtraction(a, ex, said);
     } catch (e) { console.warn('memory extraction skipped', e); }
     persist(name);
     if (db.current === name) { renderMap(); if (!loreEditing) renderLore(); }
@@ -147,20 +159,30 @@ async function takeTurn(input, hidden, onDelta) {
   });
   return reply;
 }
-function applyExtraction(a, raw) {
+function applyExtraction(a, raw, said) {
   const i = raw.indexOf('{'), j = raw.lastIndexOf('}'); if (i < 0 || j < i) return;
   const o = JSON.parse(raw.slice(i, j + 1)), n = a.transcript.length;
   (o.lore || []).forEach(e => {
     const name = String(e.name || '').trim(); if (!name) return;
-    const k = name.toLowerCase(), cur = a.lore[k] || (a.lore[k] = { name, type: 'other', desc: '', aliases: [] });
+    const role = String(e.role || '').trim();
+    // The id wins: that is how a stranger who finally gives their name, or a corrected spelling, lands on the entry it belongs to.
+    let cur = (e.id && a.lore[String(e.id).trim()]) || findLore(a, name);
+    if (!cur) cur = addLore(a, Object.assign({ name, type: 'other', desc: '' }, e.hidden === true && role ? { hidden: true, role } : {}));
     if (!cur.byPlayer) {   // never overwrite an entry the player wrote by hand
       if (e.type) cur.type = e.type;
+      const clash = findLore(a, name);   // renamed or finally named: the old name becomes an alias, unless another entry already has the new one
+      // A hidden name only changes when the story itself says a different one, so a description ("Fisherman") never replaces it.
+      if (name.toLowerCase() !== cur.name.toLowerCase() && (!clash || clash === cur) && (!cur.hidden || (e.hidden === false && nameSaid(said || '', { name })))) { cur.aliases = [...(cur.aliases || []), cur.name]; cur.name = name; }
+      if (role && cur.hidden) cur.role = role;
       const d = String(e.desc || '').trim();
       if (d && d !== cur.desc) { if (cur.desc) { cur.history = (cur.history || []).concat({ t: n, desc: cur.desc }).slice(-4); cur.changedAt = n; } cur.desc = d; }   // living lore: keep the last few versions
     }
-    cur.aliases = [...new Set([...(cur.aliases || []), ...(e.aliases || [])])]; cur.lastSeen = n;
-    if (cur.type === 'place') addPlace(a, name);
+    if (e.hidden === false) cur.hidden = false;
+    cur.aliases = [...new Set([...(cur.aliases || []), ...(e.aliases || [])].map(x => String(x || '').trim()))].filter(x => x && x.toLowerCase() !== cur.name.toLowerCase()); cur.lastSeen = n;
+    if (cur.type === 'place') addPlace(a, cur.name);
   });
+  // A hidden name is revealed as soon as it is said in the story (they introduce themselves, someone uses it, or the player asks).
+  if (said) Object.values(a.lore).forEach(e => { if (e.hidden && nameSaid(said, e)) { e.hidden = false; e.lastSeen = n; } });
   (o.events || []).forEach(ev => a.events.push('T' + n + ': ' + ev));
   const prev = a.location;
   if (o.location && String(o.location).trim()) {
@@ -184,8 +206,8 @@ async function refreshBible(a) {
   const recent = a.transcript.slice(-BIBLE_EVERY * 2).map(t => t.role + ': ' + t.text).join('\n');
   const wi = wishAt(a.bible), wishes = wi >= 0 ? a.bible.slice(wi).trim() : wishesSection(a), before = a.bible;   // keep the wishes block exactly as it is now (it may have been hand-edited)
   const nb = await chat('bible', [
-    { role: 'system', content: 'Rewrite the story bible for a text adventure as a tight one-pager (max 450 words, markdown), addressing the player character as "you" (name them once, never narrate them in the third person): premise, tone, player character, cast, setting, current situation, goals, and a "story so far" summary. Keep everything still relevant; compress old material. Do NOT include a "Player\'s Wishes" section; it is added separately. Keep any details the player wrote by hand, even if unusual. Output only the bible.' },
-    { role: 'user', content: 'CURRENT BIBLE:\n' + stripWishes(a.bible) + '\n\n' + playerFactsText(a) + 'MISSION MAP:\n' + mapText(a) + '\nRECENT TRANSCRIPT:\n' + recent }]);
+    { role: 'system', content: 'Rewrite the story bible for a text adventure as a tight one-pager (max 450 words, markdown), addressing the player character as "you" (name them once, never narrate them in the third person): premise, tone, player character, cast, setting, current situation, goals, and a "story so far" summary. Keep everything still relevant; compress old material. Do NOT include a "Player\'s Wishes" section; it is added separately. Keep any details the player wrote by hand, even if unusual. Call anyone whose name the player has not learned yet only by their role (listed below, if any); never write that name. Output only the bible.' },
+    { role: 'user', content: 'CURRENT BIBLE:\n' + stripWishes(a.bible) + '\n\n' + playerFactsText(a) + (hiddenPeople(a).length ? 'NAMES THE PLAYER HAS NOT LEARNED (write the role, never the name): ' + hiddenPeople(a).map(e => e.name + ' = "' + (e.role || 'a stranger') + '"').join('; ') + '\n\n' : '') + 'MISSION MAP:\n' + mapText(a) + '\nRECENT TRANSCRIPT:\n' + recent }]);
   if (nb && nb.trim() && a.bible === before) { a.bible = stripWishes(nb.trim()) + '\n\n' + wishes; if (a.bibleSeen === before) a.bibleSeen = a.bible; }   // skip if you edited the bible while this refresh was running
 }
 // ---------------- Player edits: hand changes to the bible or lore override earlier narration ----------------
@@ -392,6 +414,7 @@ async function undoLast() {
   const undone = a.transcript.slice(a.undo.tlen), pl = undone.find(t => t.role === 'player');
   a.transcript.length = a.undo.tlen;
   MEM_KEYS.forEach(k => a[k] = a.undo.mem[k]);
+  keyLore(a);   // an undo saved before lore had ids
   a.undo = null; a.result = null; a.finishing = false; if (timed(a)) a.lastSendAt = Date.now(); persist();
   if (pl) $('input').value = pl.text;
   refresh(); showTab('story');
@@ -400,49 +423,67 @@ $('undoBtn').onclick = undoLast;
 
 // ---------------- Lore editor ----------------
 let loreEditing = null;
+// The World tab never gives away a name the story has not revealed: the person is shown by their role, and their name is swapped for
+// it in every description.
+function maskHidden(a) {
+  const hs = Object.values(a.lore).filter(e => e.hidden && e.role && !e.isPlayer);
+  const subs = hs.flatMap(h => [h.name, String(h.name).split(/\s+/)[0]].filter(n => n.length > 2 && !TITLE.test(n)).map(n => [new RegExp('(^|[^\\p{L}\\p{N}])' + reEsc(n) + '(?![\\p{L}\\p{N}])', 'giu'), h.role]));
+  return t => subs.reduce((s, [re, role]) => s.replace(re, (m, pre, at, all) => pre + (/(^|[.!?]\s*)$/.test(all.slice(0, at) + pre) ? cap1(role) : role)), String(t || ''));
+}
+const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
 function renderLore() {
   const a = A(), box = $('lore'); if (!a) { box.innerHTML = ''; return; }
-  const form = (k, e) => '<div class="card lf"><input id="loreName" placeholder="Name" value="' + esc(e.name || '').replace(/"/g, '&quot;') + '">' +
+  const q = s => esc(s).replace(/"/g, '&quot;'), mask = maskHidden(a);
+  const form = (k, e) => '<div class="card lf"><input id="loreName" placeholder="Name" value="' + q(e.name || '') + '">' +
     '<select id="loreType">' + ['person', 'place', 'item', 'faction', 'other'].map(t => '<option' + (t === (e.type || 'other') ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>' +
-    '<input id="loreAliases" placeholder="Aliases, comma separated" value="' + esc((e.aliases || []).join(', ')).replace(/"/g, '&quot;') + '">' +
+    '<input id="loreAliases" placeholder="Aliases, comma separated" value="' + q((e.aliases || []).join(', ')) + '">' +
+    '<label class="tag"><input type="checkbox" id="loreHidden"' + (e.hidden ? ' checked' : '') + '>Name not revealed in the story yet; until then they are</label>' +
+    '<input id="loreRole" placeholder="e.g. the old man, the captain" value="' + q(e.role || '') + '">' +
     '<textarea id="loreDesc" rows="3" placeholder="Description">' + esc(e.desc || '') + '</textarea>' +
-    '<button class="primary mini" data-act="save" data-k="' + esc(k) + '">Save</button><button class="mini" data-act="cancel">Cancel</button></div>';
+    '<button class="primary mini" data-act="save" data-k="' + q(k) + '">Save</button><button class="mini" data-act="cancel">Cancel</button></div>';
   let html = '<button class="mini" data-act="add">+ Add entry</button> <span class="tag">' + Object.keys(a.lore).length + ' entries. Fix duplicates with Merge.</span><div style="margin-top:10px"></div>';
   if (loreEditing === '__new') html += form('__new', {});
   const rank = e => e.isPlayer ? 0 : ({ person: 1, place: 2, faction: 3, item: 4 }[e.type] || 5);
-  html += Object.entries(a.lore).sort((x, y) => rank(x[1]) - rank(y[1]) || x[1].name.localeCompare(y[1].name)).map(([k, e]) => loreEditing === k ? form(k, e) :
-    '<div class="card"><b>' + esc(e.name) + '</b> <span class="tag">' + (e.isPlayer ? 'main character (you) &middot; ' : '') + esc(e.type || '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(e.aliases.join(', ')) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (the AI keeps it as written)' : '') + (e.changedAt && !e.byPlayer ? ' &middot; &#10227; updated in play (turn ' + Math.ceil(e.changedAt / 2) + ')' : '') + '</span><br>' + esc(e.desc || '') +
-    (e.history && e.history.length && !e.byPlayer ? '<details class="tag"><summary>Earlier versions</summary>' + e.history.slice().reverse().map(h => '<div>Turn ' + Math.ceil(h.t / 2) + ': ' + esc(h.desc) + '</div>').join('') + '</details>' : '') +
-    '<br><button class="mini" data-act="edit" data-k="' + esc(k) + '">Edit</button><button class="mini" data-act="merge" data-k="' + esc(k) + '">Merge into...</button><button class="mini" data-act="del" data-k="' + esc(k) + '">Delete</button></div>').join('');
+  const shown = e => e.hidden && e.role ? cap1(e.role) : e.name;
+  html += Object.entries(a.lore).sort((x, y) => rank(x[1]) - rank(y[1]) || shown(x[1]).localeCompare(shown(y[1]))).map(([k, e]) => loreEditing === k ? form(k, e) :
+    '<div class="card"><b>' + esc(shown(e)) + '</b> <span class="tag">' + (e.isPlayer ? 'main character (you) &middot; ' : '') + esc(e.type || '') + (e.hidden && e.role ? ' &middot; name not revealed yet' : '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(mask(e.aliases.join(', '))) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (the AI keeps it as written)' : '') + (e.changedAt && !e.byPlayer ? ' &middot; &#10227; updated in play (turn ' + Math.ceil(e.changedAt / 2) + ')' : '') + '</span><br>' + esc(mask(e.desc)) +
+    (e.history && e.history.length && !e.byPlayer ? '<details class="tag"><summary>Earlier versions</summary>' + e.history.slice().reverse().map(h => '<div>Turn ' + Math.ceil(h.t / 2) + ': ' + esc(mask(h.desc)) + '</div>').join('') + '</details>' : '') +
+    '<br><button class="mini" data-act="edit" data-k="' + q(k) + '">Edit</button><button class="mini" data-act="merge" data-k="' + q(k) + '">Merge into...</button><button class="mini" data-act="del" data-k="' + q(k) + '">Delete</button></div>').join('');
   box.innerHTML = html;
 }
 function saveLore(k) {
   const a = A(), name = $('loreName').value.trim(); if (!name) { alert('Name is required.'); return; }
-  const nk = name.toLowerCase(), old = k !== '__new' ? a.lore[k] : null;
-  if (nk !== k && a.lore[nk] && !confirm('An entry named "' + a.lore[nk].name + '" exists. Overwrite it?')) return;
-  if (old && nk !== k) delete a.lore[k];
-  const type = $('loreType').value, desc = $('loreDesc').value.trim();
-  const changed = !old || old.name !== name || old.type !== type || (old.desc || '') !== desc;
-  a.lore[nk] = { name, type, desc, aliases: $('loreAliases').value.split(',').map(s => s.trim()).filter(Boolean), lastSeen: old ? old.lastSeen : a.transcript.length,
-    byPlayer: changed || !!(old && old.byPlayer), editedAt: changed ? Date.now() : (old && old.editedAt), isPlayer: !!(old && old.isPlayer) };
-  if (changed) noteChange(a, 'Lore ' + (old && old.name !== name ? '("' + old.name + '" is now "' + name + '") ' : '') + loreLine(a.lore[nk]).slice(5));
-  if (a.undo) { a.undo.mem.lore = a.undo.mem.lore || {}; if (old && nk !== k) delete a.undo.mem.lore[k]; a.undo.mem.lore[nk] = structuredClone(a.lore[nk]); a.undo.mem.changes = structuredClone(a.changes); }   // so Undo never reverts a hand edit
+  const old = k !== '__new' ? a.lore[k] : null, other = findLore(a, name);
+  if (other && other !== old && other.name.toLowerCase() === name.toLowerCase() && !confirm('An entry named "' + other.name + '" exists. Overwrite it?')) return;
+  if (other && other !== old && other.name.toLowerCase() === name.toLowerCase()) delete a.lore[other.id];
+  const type = $('loreType').value, desc = $('loreDesc').value.trim(), role = $('loreRole').value.trim(), hidden = $('loreHidden').checked && !!role;
+  const changed = !old || old.name !== name || old.type !== type || (old.desc || '') !== desc || !!old.hidden !== hidden || (old.role || '') !== role;
+  const e = Object.assign(old || { id: newLoreId(a) }, { name, type, desc, aliases: $('loreAliases').value.split(',').map(s => s.trim()).filter(Boolean), lastSeen: old ? old.lastSeen : a.transcript.length,
+    byPlayer: changed || !!(old && old.byPlayer), editedAt: changed ? Date.now() : (old && old.editedAt), isPlayer: !!(old && old.isPlayer), role, hidden });
+  if (!role) delete e.role; if (!hidden) delete e.hidden;
+  a.lore[e.id] = e;
+  if (changed) noteChange(a, 'Lore ' + (old && old.name !== name ? '("' + old.name + '" is now "' + name + '") ' : '') + loreLine(e).slice(5));
+  if (a.undo) { a.undo.mem.lore = a.undo.mem.lore || {}; if (other && other !== old) delete a.undo.mem.lore[other.id]; a.undo.mem.lore[e.id] = structuredClone(e); a.undo.mem.changes = structuredClone(a.changes); }   // so Undo never reverts a hand edit
   if (type === 'place') addPlace(a, name);
   loreEditing = null; persist(); renderMap(); renderLore();
 }
 function mergeLore(k) {
-  const a = A(), src = a.lore[k], others = Object.values(a.lore).filter(e => e.name.toLowerCase() !== k);
+  const a = A(), src = a.lore[k], others = Object.values(a.lore).filter(e => e !== src);
   if (!others.length) { alert('No other entries to merge into.'); return; }
   const pick = prompt('Merge "' + src.name + '" INTO which entry? Type its exact name:\n\n' + others.map(e => '- ' + e.name).join('\n'));
   if (!pick) return;
-  const tk = pick.trim().toLowerCase(), tgt = a.lore[tk]; if (!tgt || tk === k) { alert('No matching entry.'); return; }
-  tgt.aliases = [...new Set([...(tgt.aliases || []), ...(src.aliases || []), src.name])].filter(x => x.toLowerCase() !== tk);
+  const tgt = others.find(e => e.name.toLowerCase() === pick.trim().toLowerCase()); if (!tgt) { alert('No matching entry.'); return; }
+  tgt.aliases = [...new Set([...(tgt.aliases || []), ...(src.aliases || []), src.name])].filter(x => x.toLowerCase() !== tgt.name.toLowerCase());
   if (src.desc && !(tgt.desc || '').includes(src.desc)) tgt.desc = ((tgt.desc || '') + ' ' + src.desc).trim();
+  if (src.isPlayer) tgt.isPlayer = true;
+  tgt.lastSeen = Math.max(tgt.lastSeen || 0, src.lastSeen || 0);
   delete a.lore[k];
-  const fix = x => x === k ? tk : x;
-  a.edges = [...new Set(a.edges.map(e => e.split('|').map(fix).sort().join('|')).filter(e => { const [p, q] = e.split('|'); return p !== q; }))];
-  if (a.places[k]) { addPlace(a, tgt.name); delete a.places[k]; }
-  if ((a.location || '').toLowerCase() === k) a.location = tgt.name;
+  const sk = src.name.toLowerCase(), tk = tgt.name.toLowerCase(), fix = x => x === sk ? tk : x;   // places are keyed by name
+  if (a.places[sk]) {
+    a.edges = [...new Set(a.edges.map(e => e.split('|').map(fix).sort().join('|')).filter(e => { const [p, q] = e.split('|'); return p !== q; }))];
+    addPlace(a, tgt.name); delete a.places[sk];
+  }
+  if ((a.location || '').toLowerCase() === sk) a.location = tgt.name;
   persist(); renderMap(); renderLore();
 }
 $('lore').onclick = e => {

@@ -59,7 +59,23 @@ async function loadInvite() {
 }
 const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
-const norm = a => { a.places = a.places || {}; a.edges = a.edges || []; a.beats = a.beats || []; a.events = a.events || []; a.lore = a.lore || {}; a.transcript = a.transcript || []; a.location = a.location || ''; a.chunks = a.chunks || []; a.emb = a.emb || {}; a.summarizedUpTo = a.summarizedUpTo || 0; return a; };
+const norm = a => { a.places = a.places || {}; a.edges = a.edges || []; a.beats = a.beats || []; a.events = a.events || []; a.lore = a.lore || {}; a.transcript = a.transcript || []; a.location = a.location || ''; a.chunks = a.chunks || []; a.emb = a.emb || {}; a.summarizedUpTo = a.summarizedUpTo || 0; keyLore(a); return a; };
+// Lore entries are keyed by a stable id ("e7"), never by their name, so a character who is renamed, or finally tells you their name, keeps
+// one entry instead of growing a duplicate. Older saves keyed by name are re-keyed on load (their duplicates stay until merged by hand).
+function newLoreId(a) { let n = a.loreSeq || 0; do n++; while (a.lore['e' + n]); a.loreSeq = n; return 'e' + n; }
+function keyLore(a) {
+  const es = Object.entries(a.lore); if (es.every(([k, e]) => e && e.id === k)) return;
+  a.loreSeq = Math.max(a.loreSeq || 0, ...es.map(([, e]) => +(/^e(\d+)$/.exec((e && e.id) || '') || [0, 0])[1]));
+  const out = {}; a.lore = out;
+  es.forEach(([, e]) => { if (!e || !e.name) return; if (!e.id || out[e.id]) e.id = newLoreId(a); out[e.id] = e; });
+}
+// Finds an entry by id, then by its name, an alias, or the role a not-yet-named person goes by (ignoring case).
+function findLore(a, ref) {
+  const r = String(ref || '').trim(), l = r.toLowerCase(); if (!r) return null;
+  const es = Object.values(a.lore), same = x => String(x || '').toLowerCase().replace(/^the\s+/, '') === l.replace(/^the\s+/, '');
+  return a.lore[r] || es.find(e => e.name.toLowerCase() === l) || es.find(e => (e.aliases || []).some(x => String(x).toLowerCase() === l)) || es.find(e => e.hidden && same(e.role)) || null;
+}
+function addLore(a, e) { const id = newLoreId(a); a.lore[id] = Object.assign({ aliases: [] }, e, { id }); return a.lore[id]; }
 Object.values(db.adventures).forEach(norm);
 
 // ---------------- persistence: localStorage + optional folder of files ----------------

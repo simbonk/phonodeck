@@ -434,9 +434,9 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     } catch (e) { console.warn('curator generation failed, using answers directly', e); }
   }
   a.roadmap = sim ? [] : validMinuteRoadmap(made && made.roadmap, M) || defaultMinuteRoadmap(M);
-  if (photo) (photo.lore || []).forEach(e => { if (!e || !e.name) return; const k = String(e.name).toLowerCase(); if (!a.lore[k]) a.lore[k] = { name: e.name, type: e.type || 'other', desc: e.desc || '', aliases: e.aliases || [], lastSeen: 0 }; if (a.lore[k].type === 'place') addPlace(a, e.name); });
+  if (photo) (photo.lore || []).forEach(e => { if (!e || !e.name || findLore(a, e.name)) return; const n = addLore(a, { name: e.name, type: e.type || 'other', desc: e.desc || '', aliases: e.aliases || [], lastSeen: 0 }); if (n.type === 'place') addPlace(a, e.name); });
   // Same cast: the returning lore comes first; the architect's new or updated entries are applied on top (hand-edited entries stay as written).
-  if (src) Object.entries(src.lore).forEach(([k, e]) => { a.lore[k] = Object.assign(structuredClone(e), { lastSeen: 0 }); if (e.type === 'place') addPlace(a, e.name); });
+  if (src) Object.values(src.lore).forEach(e => { const n = addLore(a, Object.assign(structuredClone(e), { lastSeen: 0 })); if (n.type === 'place') addPlace(a, e.name); });
   if (made && made.bible) {
     a.bible = '# Story Bible\n\n' + String(made.bible).replace(/^#\s*Story Bible\s*/i, '').trim();
     a.location = made.location || '';
@@ -445,9 +445,13 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     if (!sim) (made.beats || []).forEach(b => b && b.beat && a.beats.push({ beat: b.beat, status: b.status || 'upcoming' }));
     if (made.voice || made.secrets) a.gm = { voice: made.voice || '', secrets: made.secrets || [], threads: made.threads || [], big_reveal: made.big_reveal || '', cast: capCast(made.cast, M) };
     (made.lore || []).forEach(e => {
-      if (!e.name) return; const k = e.name.toLowerCase(), old = a.lore[k]; if (old && old.byPlayer) return;
-      a.lore[k] = { name: e.name, type: e.type || (old && old.type) || 'other', desc: e.desc || (old && old.desc) || '', aliases: [...new Set([...((old && old.aliases) || []), ...(e.aliases || [])])], lastSeen: 0 };
-      if (a.lore[k].type === 'place') addPlace(a, e.name);
+      if (!e || !e.name) return; const old = findLore(a, e.name); if (old && old.byPlayer) return;
+      const role = String(e.role || '').trim(), type = e.type || (old && old.type) || 'other';
+      const n = Object.assign(old || addLore(a, {}), { name: e.name, type, desc: e.desc || (old && old.desc) || '', aliases: [...new Set([...((old && old.aliases) || []), ...(e.aliases || [])])], lastSeen: 0 });
+      // A stranger the player has yet to meet keeps their name hidden until the story reveals it (a returning character stays known).
+      if (type === 'person' && role) n.role = role;
+      if (type === 'person' && role && e.known === false && !(old && !old.hidden)) n.hidden = true; else delete n.hidden;
+      if (n.type === 'place') addPlace(a, e.name);
     });
     if (made.player && (made.player.name || g('name'))) addPlayerLore(a, g('name') || made.player.name, made.player.desc);
   } else if (src) {   // offline or the architect failed: reuse the old bible and note the new story's premise
@@ -459,7 +463,7 @@ async function createAdventure(name, answers, cats, srcName, photo) {
       (sim ? '' : L('Central hook', g('hook')) + L('Main threat', g('threat')) + L('Style of play', g('play'))) + L('Company', g('allies')) + (g('romance') ? L('Romance', g('romance')) : '');
   }
   if (!Object.values(a.lore).some(e => e.isPlayer)) addPlayerLore(a, g('name') || 'You', [g('who'), g('traits'), g('romance')].filter(Boolean).join('. ') || 'The player character.');
-  if (photo) (photo.people || []).forEach(p => { const n = String(p.label || '').trim(); if (n && !/^the\b/i.test(n) && !a.lore[n.toLowerCase()]) a.lore[n.toLowerCase()] = { name: n, type: 'person', desc: p.desc || '', aliases: [], lastSeen: 0 }; });   // people the caption named
+  if (photo) (photo.people || []).forEach(p => { const n = String(p.label || '').trim(); if (n && !/^the\b/i.test(n) && !findLore(a, n)) addLore(a, { name: n, type: 'person', desc: p.desc || '', aliases: [], lastSeen: 0 }); });   // people the caption named
   a.bible += '\n\n' + wishesSection(a); a.bibleSeen = a.bible;
   db.adventures[name] = a; db.current = name; persist(name);
 }
@@ -480,7 +484,7 @@ function playerBrief(name, age) {   // the player character's name and age, plus
   return (name ? "\n\nPLAYER CHARACTER'S NAME: " + name + ' (use exactly; never invent a different name for the player)' + (full ? '. People address them as they really would in this setting: rank or title with the LAST name (e.g. "Captain ' + name.trim().split(/\s+/).slice(-1)[0] + '" or "Doctor ' + name.trim().split(/\s+/).slice(-1)[0] + '"), the first name only from friends, family and close equals. Never rank or title with the first name.' : '') : '') + (bits.length ? '\nABOUT THE REAL PLAYER (defaults; the answers above win where they differ): ' + bits.join('; ') : '');
 }
 function addPlayerLore(a, name, desc) {   // the main character's own lore entry; always listed first
-  const k = String(name).toLowerCase(), old = a.lore[k];
-  a.lore[k] = Object.assign(old || { aliases: [] }, { name, type: 'person', desc: [old && old.desc, desc].filter(Boolean).join(' ').trim(), isPlayer: true, lastSeen: 0 });
+  const old = findLore(a, name), e = old || addLore(a, {});
+  Object.assign(e, { name, type: 'person', desc: [old && old.desc, desc].filter(Boolean).join(' ').trim(), isPlayer: true, lastSeen: 0 }); delete e.hidden;
 }
 
