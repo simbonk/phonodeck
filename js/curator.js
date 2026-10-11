@@ -357,14 +357,17 @@ function materialize(el, text) {   // letters condense out of the glow, one afte
   el.querySelectorAll('.mw span').forEach((sp, i) => sp.style.animationDelay = Math.min(i * 22, 1800) + 'ms');
 }
 function forgeOpen(name) {
-  forge = { at: -1, target: 0, shownAt: 0, raw: '', t0: Date.now(), finds: {} };
+  forge = { at: -1, target: 0, shownAt: 0, raw: '', t0: Date.now(), finds: {}, lines: FORGE[0].why.slice() };
+  if (cur.preset) {   // a curated experience: a reminder that every detail can be your own next time
+    forge.lines.splice(2, 0, 'This world was curated for you. You can set every detail yourself with "Build the world myself".');
+    forge.lines.splice(8, 0, 'Next time, try "Build the world myself": your feeling, your setting, your cast.'); }
   $('forgeCore').innerHTML = HOLO_SVG; materialize($('forgeName'), name);
   $('forgeSteps').innerHTML = FORGE.map((f, i) => '<li id="fs' + i + '"><i></i><div><b></b><p class="fwhy"></p><p class="ffind"></p></div></li>').join('');
   FORGE.forEach((f, i) => $('fs' + i).querySelector('b').textContent = f.t);
   $('forge').classList.remove('out'); $('forge').classList.add('on'); forgeShow(0);
   forge.timer = setInterval(() => {
     const sec = Math.round((Date.now() - forge.t0) / 1000); $('forgeTime').textContent = sec + 's';
-    if (forge.at === 0 && sec % 4 === 0) { const w = FORGE[0].why; materialize($('fs0').querySelector('.fwhy'), w[sec / 4 % w.length]); }   // the long first wait cycles through a few lines
+    if (forge.at === 0 && sec % 4 === 0) { const w = forge.lines; materialize($('fs0').querySelector('.fwhy'), w[sec / 4 % w.length]); }   // the long first wait cycles through a few lines
   }, 1000);
   if (S().fake) return sleep(2500).then(() => forgeAt(5));   // the offline demo has no architect to follow
 }
