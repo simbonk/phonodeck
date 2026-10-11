@@ -431,11 +431,12 @@ function maskHidden(a) {
   return t => subs.reduce((s, [re, role]) => s.replace(re, (m, pre, at, all) => pre + (/(^|[.!?]\s*)$/.test(all.slice(0, at) + pre) ? cap1(role) : role)), String(t || ''));
 }
 const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
+const typeLabel = t => t === 'person' ? 'character' : t || '';   // "person" entries include animals and creatures (a crab, the island dog), so the screen says "character"
 function renderLore() {
   const a = A(), box = $('lore'); if (!a) { box.innerHTML = ''; return; }
   const q = s => esc(s).replace(/"/g, '&quot;'), mask = maskHidden(a);
   const form = (k, e) => '<div class="card lf"><input id="loreName" placeholder="Name" value="' + q(e.name || '') + '">' +
-    '<select id="loreType">' + ['person', 'place', 'item', 'faction', 'other'].map(t => '<option' + (t === (e.type || 'other') ? ' selected' : '') + '>' + t + '</option>').join('') + '</select>' +
+    '<select id="loreType">' + ['person', 'place', 'item', 'faction', 'other'].map(t => '<option value="' + t + '"' + (t === (e.type || 'other') ? ' selected' : '') + '>' + typeLabel(t) + '</option>').join('') + '</select>' +
     '<input id="loreAliases" placeholder="Aliases, comma separated" value="' + q((e.aliases || []).join(', ')) + '">' +
     '<label class="tag"><input type="checkbox" id="loreHidden"' + (e.hidden ? ' checked' : '') + '>Name not revealed in the story yet; until then they are</label>' +
     '<input id="loreRole" placeholder="e.g. the old man, the captain" value="' + q(e.role || '') + '">' +
@@ -446,7 +447,7 @@ function renderLore() {
   const rank = e => e.isPlayer ? 0 : ({ person: 1, place: 2, faction: 3, item: 4 }[e.type] || 5);
   const shown = e => e.hidden && e.role ? cap1(e.role) : e.name;
   html += Object.entries(a.lore).sort((x, y) => rank(x[1]) - rank(y[1]) || shown(x[1]).localeCompare(shown(y[1]))).map(([k, e]) => loreEditing === k ? form(k, e) :
-    '<div class="card"><b>' + esc(shown(e)) + '</b> <span class="tag">' + (e.isPlayer ? 'main character (you) &middot; ' : '') + esc(e.type || '') + (e.hidden && e.role ? ' &middot; name not revealed yet' : '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(mask(e.aliases.join(', '))) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (the AI keeps it as written)' : '') + (e.changedAt && !e.byPlayer ? ' &middot; &#10227; updated in play (turn ' + Math.ceil(e.changedAt / 2) + ')' : '') + '</span><br>' + esc(mask(e.desc)) +
+    '<div class="card"><b>' + esc(shown(e)) + '</b> <span class="tag">' + (e.isPlayer ? 'main character (you) &middot; ' : '') + esc(typeLabel(e.type)) + (e.hidden && e.role ? ' &middot; name not revealed yet' : '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(mask(e.aliases.join(', '))) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (the AI keeps it as written)' : '') + (e.changedAt && !e.byPlayer ? ' &middot; &#10227; updated in play (turn ' + Math.ceil(e.changedAt / 2) + ')' : '') + '</span><br>' + esc(mask(e.desc)) +
     (e.history && e.history.length && !e.byPlayer ? '<details class="tag"><summary>Earlier versions</summary>' + e.history.slice().reverse().map(h => '<div>Turn ' + Math.ceil(h.t / 2) + ': ' + esc(mask(h.desc)) + '</div>').join('') + '</details>' : '') +
     '<br><button class="mini" data-act="edit" data-k="' + q(k) + '">Edit</button><button class="mini" data-act="merge" data-k="' + q(k) + '">Merge into...</button><button class="mini" data-act="del" data-k="' + q(k) + '">Delete</button></div>').join('');
   box.innerHTML = html;
