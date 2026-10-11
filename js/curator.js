@@ -322,14 +322,73 @@ async function curAdvance() {
   else { const w = cur.answers.world || (cur.answers.describe || '').split(/[.!?]/)[0]; suggested = (isNoPref(w) || !w ? 'Adventure' : w.split(',')[0]).replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 30) + ' ' + new Date().toISOString().slice(5, 10); }
   let name = prompt('Name this experience:', suggested); if (!name) return; name = name.trim();
   if (db.adventures[name] && !confirm('"' + name + '" exists. Replace it?')) return;
-  busyBtn($('curNext'), 'Building your world...'); $('curMsg').textContent = 'The curator is building your world. This takes a few seconds.';
+  busyBtn($('curNext'), 'Building your world...'); $('curMsg').textContent = ''; await forgeOpen(name);
   // The chosen "how do you like to play" options (including AI-suggested ones) become the gameplay categories the Director rotates through at random.
   const notCats = QBY.play.c.slice(4).map(s => s.toLowerCase());
   const cats = (isNoPref(cur.answers.play) ? '' : cur.answers.play || '').split(/,\s*/).map(s => s.trim()).filter(s => s && !notCats.includes(s.toLowerCase())).slice(0, 6);   // "surprise me" contains a comma, so drop it whole
   try { await createAdventure(name, answers, cats, cur.src, cur.photo && cur.photo.canvas ? cur.photo : null); }
-  catch (e) { $('curMsg').textContent = (e.quota ? '' : 'Error: ') + e.message; busyBtn($('curNext')); curNextLabel(); return; }
+  catch (e) { forgeClose(true); $('curMsg').textContent = (e.quota ? '' : 'Error: ') + e.message; busyBtn($('curNext')); curNextLabel(); return; }
   busyBtn($('curNext')); curNextLabel();
-  $('curator').classList.remove('on'); enterAdventure(name, true);
+  $('curator').classList.remove('on'); forgeAt(6); enterAdventure(name, true).finally(() => forgeClose());   // the build screen stays up until the opening scene's first words
+}
+
+// ---------------- The build screen: between "Build my world" and the opening scene ----------------
+// The architect's reply is one JSON object written in a fixed order (see CREATE_RULES), and it is streamed, so each stage lights up when the
+// model really starts writing that part. Nothing here is a timed fake (except the offline demo, which has no architect to follow).
+const FORGE = [
+  { t: 'Reading your wishes', why: 'The story architect is studying every answer you gave, above all the feeling you want to come away with. Everything that follows is built to deliver it.' },
+  { t: 'Building the story', keys: ['bible'], why: 'A story bible written for you alone: the premise, the tone, the setting, and who you are in this world.' },
+  { t: 'Mapping the world', keys: ['location', 'places', 'links', 'beats'], why: 'Real places joined into a map you can wander, and the first steps of your mission.' },
+  { t: 'Establishing characters and lore', keys: ['player', 'lore'], why: 'Every person, place and object gets an entry in the lore, so the world remembers them and stays true to itself however far you stray.' },
+  { t: 'Crafting the Game Master', keys: ['voice', 'secrets', 'threads', 'big_reveal'], why: 'A hidden Game Master gets its own narrating voice, a palette of sights and sounds that belong only to this world, and secrets you have not discovered yet.' },
+  { t: 'Crafting the Director', keys: ['cast', 'roadmap'], why: 'The Director gives each character an agenda they pursue even when you are not looking, and paces the acts so the story lands your feeling in the time you have.' },
+  { t: 'Raising the curtain', why: 'The Game Master is writing your opening scene. From here on, you speak and the world answers.' }
+];
+let forge = null;
+function materialize(el, text) {   // letters condense out of the glow, one after another
+  el.innerHTML = String(text).split(/(\s+)/).map(w => /^\s+$/.test(w) ? w : '<span class="mw">' + [...w].map(ch => '<span>' + esc(ch) + '</span>').join('') + '</span>').join('');
+  el.querySelectorAll('.mw span').forEach((sp, i) => sp.style.animationDelay = Math.min(i * 22, 1800) + 'ms');
+}
+function forgeOpen(name) {
+  forge = { at: -1, raw: '', t0: Date.now(), finds: {} };
+  $('forgeCore').innerHTML = HOLO_SVG; materialize($('forgeName'), name);
+  $('forgeSteps').innerHTML = FORGE.map((f, i) => '<li id="fs' + i + '"><i></i><div><b></b><p class="fwhy"></p><p class="ffind"></p></div></li>').join('');
+  FORGE.forEach((f, i) => $('fs' + i).querySelector('b').textContent = f.t);
+  $('forge').classList.remove('out'); $('forge').classList.add('on'); forgeAt(0);
+  forge.timer = setInterval(() => { $('forgeTime').textContent = Math.round((Date.now() - forge.t0) / 1000) + 's'; }, 1000);
+  if (S().fake) return (async () => { for (let k = 1; k < 6 && forge; k++) { await sleep(900); forgeAt(k); } await sleep(900); })();   // the offline demo has no architect to follow, so it walks the stages
+}
+function forgeAt(k) {   // move to stage k (never backwards)
+  if (!forge || k <= forge.at) return;
+  forge.at = k;
+  FORGE.forEach((f, i) => { const li = $('fs' + i); li.className = i < k ? 'done' : i === k ? 'now' : ''; if (i !== k) li.querySelector('.fwhy').textContent = ''; });
+  const li = $('fs' + k); materialize(li.querySelector('b'), FORGE[k].t); materialize(li.querySelector('.fwhy'), FORGE[k].why);
+  $('forgeBar').firstChild.style.width = Math.round((k + 0.5) / FORGE.length * 100) + '%';
+}
+const FORGE_KEY = new RegExp('"(' + FORGE.flatMap(f => f.keys || []).join('|') + ')"\\s*:', 'g');
+function forgeFeed(d) {   // a piece of the architect's streamed reply
+  if (!forge) return; forge.raw += d; const raw = forge.raw;
+  const keys = []; let m; FORGE_KEY.lastIndex = 0; while ((m = FORGE_KEY.exec(raw))) keys.push({ key: m[1], at: m.index });
+  forgeAt(Math.max(1, ...keys.map(x => FORGE.findIndex(f => (f.keys || []).includes(x.key)))));
+  // What has been made so far (never the secrets themselves, nor the names of people you have yet to meet)
+  const part = key => { const i = keys.findIndex(x => x.key === key); return i < 0 ? null : raw.slice(keys[i].at, i + 1 < keys.length ? keys[i + 1].at : raw.length); };   // one section, even half-written
+  const strs = key => (String(part(key) || '').replace(/^"[a-z_]+"\s*:/, '').match(/"(?:[^"\\]|\\.)*"/g) || []).map(x => x.slice(1, -1));
+  const count = (key, field) => (String(part(key) || '').match(new RegExp('"' + field + '"\\s*:', 'g')) || []).length;
+  const loc = part('location') && /:\s*"((?:[^"\\]|\\.)*)"/.exec(part('location')), player = /^"player"\s*:\s*\{\s*"name"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(part('player') || '');
+  const nPlaces = strs('places').length, nLore = count('lore', 'name'), nSecrets = strs('secrets').length, nCast = count('cast', 'name'), nActs = count('roadmap', 'goal');
+  const f = forge.finds;
+  const n = (k, one, many) => k ? k + ' ' + (k === 1 ? one : many) : '';
+  f[2] = [loc && 'You begin at ' + loc[1], n(nPlaces, 'place on the map', 'places on the map')].filter(Boolean).join(' · ');
+  f[3] = [player && 'You are ' + player[1], n(nLore, 'entry in the lore', 'entries in the lore')].filter(Boolean).join(' · ');
+  f[4] = n(nSecrets, 'secret kept from you', 'secrets kept from you');
+  f[5] = [n(nCast, 'character with an agenda of their own', 'characters with agendas of their own'), n(nActs, 'act planned', 'acts planned')].filter(Boolean).join(' · ');
+  Object.entries(f).forEach(([i, t]) => { const el = $('fs' + i).querySelector('.ffind'); if (el.dataset.t === t) return; t = t.replace(/\\"/g, '"');
+    if (el.dataset.t) el.textContent = t; else materialize(el, t); el.dataset.t = t; });   // the first line condenses in; later counts just tick up
+}
+function forgeClose(now) {   // fade out (or vanish at once, back to the curator after an error)
+  if (!forge) return; clearInterval(forge.timer); forge = null;
+  const el = $('forge'); if (now) { el.classList.remove('on'); return; }
+  el.querySelectorAll('#forgeSteps li').forEach(li => li.className = 'done'); $('forgeBar').firstChild.style.width = '100%'; el.classList.add('out'); setTimeout(() => { if (!forge) el.classList.remove('on', 'out'); }, 700);
 }
 function startSequel(name) {   // a new questionnaire for the same cast and world, pre-filled from the original answers
   const src = db.adventures[name]; if (!src) return;
@@ -426,10 +485,10 @@ async function createAdventure(name, answers, cats, srcName, photo) {
   let made = null;
   if (!S().fake && hasKey()) {
     try {
-      const raw = await chat('gm', [{ role: 'system', content: CREATE_RULES + '\n' + castRules(M) + (a.age ? '\n' + ageRules(a) : '') + (M <= 15 ? '\n' + SHORT_CREATE : '') + (sim ? '\n' + SIM_CREATE : '') + (photo ? '\n' + PHOTO_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') + '\n' + namingBrief(name) },
+      const raw = await chatStream([{ role: 'system', content: CREATE_RULES + '\n' + castRules(M) + (a.age ? '\n' + ageRules(a) : '') + (M <= 15 ? '\n' + SHORT_CREATE : '') + (sim ? '\n' + SIM_CREATE : '') + (photo ? '\n' + PHOTO_CREATE : '') + (src ? '\n' + SEQUEL_RULES : '') + '\n' + namingBrief(name) },
         { role: 'user', content: (src ? sourceWorld(src, srcName) + '\n\nNEW QUESTIONNAIRE:\n' : '') + txt + (photo ? '\n\nPHOTO CANVAS (place: ' + photo.place + '; time: ' + photo.era + (photo.caption ? '; caption: ' + photo.caption : '') + '):\n' + photo.canvas +
           '\nPEOPLE IN THE PHOTO:\n' + (photo.people || []).map(p => '- ' + p.label + ': ' + p.desc).join('\n') : '') +
-          playerBrief(g('name'), a.age) + '\n\nFEELING TO ACHIEVE: ' + a.feeling + '\nPLAY MODE: ' + (sim ? 'experience simulator (no plot)' : 'curated story') + (sim ? "\nPLAYER'S GOAL: " + a.goal : '') + '\nM (session length in minutes) = ' + M + ' (roughly ' + est + ' player replies)' }]);
+          playerBrief(g('name'), a.age) + '\n\nFEELING TO ACHIEVE: ' + a.feeling + '\nPLAY MODE: ' + (sim ? 'experience simulator (no plot)' : 'curated story') + (sim ? "\nPLAYER'S GOAL: " + a.goal : '') + '\nM (session length in minutes) = ' + M + ' (roughly ' + est + ' player replies)' }], forgeFeed, '');   // streamed, so the build screen can follow the architect section by section
       made = parseJson(raw);
     } catch (e) { console.warn('curator generation failed, using answers directly', e); }
   }

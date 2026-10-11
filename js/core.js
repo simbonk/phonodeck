@@ -259,15 +259,15 @@ function showUsage() {
     (S().freeTier ? '  ||  Key without billing: Google does not bill these calls' : '');
 }
 // Streaming version of the story call: onDelta(text) fires as tokens arrive. Returns the full reply.
-async function chatStream(messages, onDelta) {
+async function chatStream(messages, onDelta, effortOverride) {   // effortOverride: '' for the model's own default thinking (the world architect)
   if (S().fake) {
     const t = fake('gm', messages);
     for (const w of (t.match(/\S+\s*/g) || [t])) { onDelta(w); await new Promise(r => setTimeout(r, 12)); }
     return t;
   }
   if (!hasKey()) throw new Error('Set your API key in Settings (or enable offline test mode).');
-  const effort = guest() || S().effort === undefined ? 'low' : S().effort;   // thinking is billed as output; low effort cuts cost and the wait for the first word
-  const variants = [[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]].map(([e, u]) => ({ stream: true, effort: e, usage: u, kind: 'gm' }));
+  const effort = effortOverride !== undefined ? effortOverride : guest() || S().effort === undefined ? 'low' : S().effort;   // thinking is billed as output; low effort cuts cost and the wait for the first word
+  const variants = [...new Set([[effort, true], [effort === 'minimal' ? 'low' : effort, true], [effort, false], ['', false]].map(v => JSON.stringify(v)))].map(v => JSON.parse(v)).map(([e, u]) => ({ stream: true, effort: e, usage: u, kind: 'gm' }));
   const { r, model } = await quotaRetry(storyModel(), true, m => tryVariants(m, variants, messages));
   if (!r.ok) throw await llmError(r, model);
   const big = !S().freeTier;
