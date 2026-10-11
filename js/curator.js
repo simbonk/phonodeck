@@ -336,34 +336,50 @@ async function curAdvance() {
 // The architect's reply is one JSON object written in a fixed order (see CREATE_RULES), and it is streamed, so each stage lights up when the
 // model really starts writing that part. Nothing here is a timed fake (except the offline demo, which has no architect to follow).
 const FORGE = [
-  { t: 'Reading your wishes', why: 'The story architect is studying every answer you gave, above all the feeling you want to come away with. Everything that follows is built to deliver it.' },
-  { t: 'Building the story', keys: ['bible'], why: 'A story bible written for you alone: the premise, the tone, the setting, and who you are in this world.' },
-  { t: 'Mapping the world', keys: ['location', 'places', 'links', 'beats'], why: 'Real places joined into a map you can wander, and the first steps of your mission.' },
-  { t: 'Establishing characters and lore', keys: ['player', 'lore'], why: 'Every person, place and object gets an entry in the lore, so the world remembers them and stays true to itself however far you stray.' },
-  { t: 'Crafting the Game Master', keys: ['voice', 'secrets', 'threads', 'big_reveal'], why: 'A hidden Game Master gets its own narrating voice, a palette of sights and sounds that belong only to this world, and secrets you have not discovered yet.' },
-  { t: 'Crafting the Director', keys: ['cast', 'roadmap'], why: 'The Director gives each character an agenda they pursue even when you are not looking, and paces the acts so the story lands your feeling in the time you have.' },
-  { t: 'Raising the curtain', why: 'The Game Master is writing your opening scene. From here on, you speak and the world answers.' }
+  { t: 'Reading your wishes', why: ['Your feeling becomes the goal of everything that follows.', 'Every answer you gave is shaping this world.', 'No two worlds are ever the same.', 'The best worlds take a moment of thought.'] },
+  { t: 'Building the story', keys: ['bible'], why: 'A story bible, written for you alone.' },
+  { t: 'Mapping the world', keys: ['location', 'places', 'links', 'beats'], why: 'Places to wander, and your first steps.' },
+  { t: 'Establishing characters and lore', keys: ['player', 'lore'], why: 'A world that remembers everyone you meet.' },
+  { t: 'Crafting the Game Master', keys: ['voice', 'secrets', 'threads', 'big_reveal'], why: 'A narrator\'s voice, and secrets kept from you.' },
+  { t: 'Crafting the Director', keys: ['cast', 'roadmap'], why: 'Characters with plans of their own, paced to your time.' },
+  { t: 'Raising the curtain', why: 'Your opening scene is being written.' }
 ];
+// The architect thinks for a long while and then writes everything in a rush, so the screen shows each stage for at least DWELL ms,
+// catching up on the stages already reached (it never runs ahead of the real progress, except the last stage once the story is ready).
+const FORGE_DWELL = 2000, FORGE_FAST = 650;
 let forge = null;
 function materialize(el, text) {   // letters condense out of the glow, one after another
   el.innerHTML = String(text).split(/(\s+)/).map(w => /^\s+$/.test(w) ? w : '<span class="mw">' + [...w].map(ch => '<span>' + esc(ch) + '</span>').join('') + '</span>').join('');
   el.querySelectorAll('.mw span').forEach((sp, i) => sp.style.animationDelay = Math.min(i * 22, 1800) + 'ms');
 }
 function forgeOpen(name) {
-  forge = { at: -1, raw: '', t0: Date.now(), finds: {} };
+  forge = { at: -1, target: 0, shownAt: 0, raw: '', t0: Date.now(), finds: {} };
   $('forgeCore').innerHTML = HOLO_SVG; materialize($('forgeName'), name);
   $('forgeSteps').innerHTML = FORGE.map((f, i) => '<li id="fs' + i + '"><i></i><div><b></b><p class="fwhy"></p><p class="ffind"></p></div></li>').join('');
   FORGE.forEach((f, i) => $('fs' + i).querySelector('b').textContent = f.t);
-  $('forge').classList.remove('out'); $('forge').classList.add('on'); forgeAt(0);
-  forge.timer = setInterval(() => { $('forgeTime').textContent = Math.round((Date.now() - forge.t0) / 1000) + 's'; }, 1000);
-  if (S().fake) return (async () => { for (let k = 1; k < 6 && forge; k++) { await sleep(900); forgeAt(k); } await sleep(900); })();   // the offline demo has no architect to follow, so it walks the stages
+  $('forge').classList.remove('out'); $('forge').classList.add('on'); forgeShow(0);
+  forge.timer = setInterval(() => {
+    const sec = Math.round((Date.now() - forge.t0) / 1000); $('forgeTime').textContent = sec + 's';
+    if (forge.at === 0 && sec % 4 === 0) { const w = FORGE[0].why; materialize($('fs0').querySelector('.fwhy'), w[sec / 4 % w.length]); }   // the long first wait cycles through a few lines
+  }, 1000);
+  if (S().fake) return sleep(2500).then(() => forgeAt(5));   // the offline demo has no architect to follow
 }
-function forgeAt(k) {   // move to stage k (never backwards)
-  if (!forge || k <= forge.at) return;
-  forge.at = k;
+function forgeShow(k) {   // light up stage k on screen
+  forge.at = k; forge.shownAt = Date.now();
   FORGE.forEach((f, i) => { const li = $('fs' + i); li.className = i < k ? 'done' : i === k ? 'now' : ''; if (i !== k) li.querySelector('.fwhy').textContent = ''; });
-  const li = $('fs' + k); materialize(li.querySelector('b'), FORGE[k].t); materialize(li.querySelector('.fwhy'), FORGE[k].why);
+  const li = $('fs' + k), why = FORGE[k].why; materialize(li.querySelector('b'), FORGE[k].t); materialize(li.querySelector('.fwhy'), Array.isArray(why) ? why[0] : why);
   $('forgeBar').firstChild.style.width = Math.round((k + 0.5) / FORGE.length * 100) + '%';
+  forgeFinds();
+}
+function forgeStep() {   // move the screen one stage towards the real progress, no faster than the dwell allows
+  if (!forge || forge.wait) return;
+  if (forge.at >= forge.target) { if (forge.closing && forge.at === FORGE.length - 1) forge.wait = setTimeout(forgeFade, 1200); return; }
+  const left = (forge.closing ? FORGE_FAST : FORGE_DWELL) - (Date.now() - forge.shownAt);
+  forge.wait = setTimeout(() => { if (!forge) return; forge.wait = null; forgeShow(forge.at + 1); forgeStep(); }, Math.max(0, left));
+}
+function forgeAt(k) {   // the real progress reached stage k (never backwards)
+  if (!forge || k <= forge.target) return;
+  forge.target = Math.min(k, FORGE.length - 1); forgeStep();
 }
 const FORGE_KEY = new RegExp('"(' + FORGE.flatMap(f => f.keys || []).join('|') + ')"\\s*:', 'g');
 function forgeFeed(d) {   // a piece of the architect's streamed reply
@@ -382,13 +398,21 @@ function forgeFeed(d) {   // a piece of the architect's streamed reply
   f[3] = [player && 'You are ' + player[1], n(nLore, 'entry in the lore', 'entries in the lore')].filter(Boolean).join(' · ');
   f[4] = n(nSecrets, 'secret kept from you', 'secrets kept from you');
   f[5] = [n(nCast, 'character with an agenda of their own', 'characters with agendas of their own'), n(nActs, 'act planned', 'acts planned')].filter(Boolean).join(' · ');
-  Object.entries(f).forEach(([i, t]) => { const el = $('fs' + i).querySelector('.ffind'); if (el.dataset.t === t) return; t = t.replace(/\\"/g, '"');
+  forgeFinds();
+}
+function forgeFinds() {   // what each finished or current stage made (later stages wait until the screen reaches them)
+  Object.entries(forge.finds).forEach(([i, t]) => { if (+i > forge.at) return; const el = $('fs' + i).querySelector('.ffind'); t = t.replace(/\\"/g, '"'); if (el.dataset.t === t) return;
     if (el.dataset.t) el.textContent = t; else materialize(el, t); el.dataset.t = t; });   // the first line condenses in; later counts just tick up
 }
-function forgeClose(now) {   // fade out (or vanish at once, back to the curator after an error)
+function forgeClose(now) {   // the story is ready: finish walking the stages quickly, then fade (or vanish at once, back to the curator after an error)
+  if (!forge || forge.closing) return;
+  if (now) { clearInterval(forge.timer); clearTimeout(forge.wait); forge = null; $('forge').classList.remove('on'); return; }
+  forge.closing = true; clearTimeout(forge.wait); forge.wait = null; forge.target = FORGE.length - 1; forgeStep();
+}
+function forgeFade() {
   if (!forge) return; clearInterval(forge.timer); forge = null;
-  const el = $('forge'); if (now) { el.classList.remove('on'); return; }
-  el.querySelectorAll('#forgeSteps li').forEach(li => li.className = 'done'); $('forgeBar').firstChild.style.width = '100%'; el.classList.add('out'); setTimeout(() => { if (!forge) el.classList.remove('on', 'out'); }, 700);
+  const el = $('forge'); el.querySelectorAll('#forgeSteps li').forEach(li => li.className = 'done'); $('forgeBar').firstChild.style.width = '100%';
+  el.classList.add('out'); setTimeout(() => { if (!forge) el.classList.remove('on', 'out'); }, 700);
 }
 function startSequel(name) {   // a new questionnaire for the same cast and world, pre-filled from the original answers
   const src = db.adventures[name]; if (!src) return;
