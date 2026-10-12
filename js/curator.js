@@ -535,9 +535,11 @@ async function createAdventure(name, answers, cats, srcName, photo) {
     if (!sim) (made.beats || []).forEach(b => b && b.beat && a.beats.push({ beat: b.beat, status: b.status || 'upcoming' }));
     if (made.voice || made.secrets) a.gm = { voice: made.voice || '', secrets: made.secrets || [], threads: made.threads || [], big_reveal: made.big_reveal || '', cast: capCast(made.cast, M) };
     (made.lore || []).forEach(e => {
-      if (!e || !e.name) return; const old = findLore(a, e.name); if (old && old.byPlayer) return;
+      if (!e || !e.name) return; const exact = findLore(a, e.name), old = exact || findSimilarLore(a, e.name, e.type); if (old && old.byPlayer) return;
       const role = String(e.role || '').trim(), type = e.type || (old && old.type) || 'other';
-      const n = Object.assign(old || addLore(a, {}), { name: e.name, type, desc: e.desc || (old && old.desc) || '', aliases: [...new Set([...((old && old.aliases) || []), ...(e.aliases || [])])], lastSeen: 0 });
+      // A returning entry under a near-miss name ("Nadine's Auburn Roadster") keeps its name and gains the new one as an alias.
+      if (old && !exact) e.aliases = [...(e.aliases || []), e.name];
+      const n = Object.assign(old || addLore(a, {}), { name: old && !exact ? old.name : e.name, type, desc: e.desc || (old && old.desc) || '', aliases: [...new Set([...((old && old.aliases) || []), ...(e.aliases || [])])], lastSeen: 0 });
       // A stranger the player has yet to meet keeps their name hidden until the story reveals it (a returning character stays known).
       if (type === 'person' && role) n.role = role;
       if (type === 'person' && role && e.known === false && !(old && !old.hidden)) n.hidden = true; else delete n.hidden;

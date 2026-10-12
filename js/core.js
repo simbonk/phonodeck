@@ -75,6 +75,14 @@ function findLore(a, ref) {
   const es = Object.values(a.lore), same = x => String(x || '').toLowerCase().replace(/^the\s+/, '') === l.replace(/^the\s+/, '');
   return a.lore[r] || es.find(e => e.name.toLowerCase() === l) || es.find(e => (e.aliases || []).some(x => String(x).toLowerCase() === l)) || es.find(e => e.hidden && same(e.role)) || null;
 }
+// The same thing under a near-miss name ("Nadine's Auburn Roadster" for "Auburn Roadster"): the names match once "the" and an owner's
+// possessive are dropped. Places, items and factions only: people are matched by id, and two people can share a surname.
+function findSimilarLore(a, name, type) {
+  if (!type || type === 'person') return null;
+  const key = s => String(s || '').toLowerCase().replace(/^the\s+/, '').replace(/^\S+['’]s\s+/, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const k = key(name); if (!k) return null;
+  return Object.values(a.lore).filter(e => e.type === type && [e.name, ...(e.aliases || [])].some(x => key(x) === k)).sort((x, y) => (y.lastSeen || 0) - (x.lastSeen || 0))[0] || null;
+}
 function addLore(a, e) { const id = newLoreId(a); a.lore[id] = Object.assign({ aliases: [] }, e, { id }); return a.lore[id]; }
 Object.values(db.adventures).forEach(norm);
 
