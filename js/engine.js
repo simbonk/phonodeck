@@ -271,11 +271,11 @@ async function retrieve(a, input, recentStart) {
   a.transcript.slice(0, recentStart).forEach(t => docs.push({ id: 'T:' + t.n, text: 'T' + t.n + ' ' + t.role + ': ' + t.text, t: tok(t.text) }));
   const inPrompt = new Set((a.chunks || []).slice(-tune('chapters')).map(c => c.from));   // chapters already in the prompt are not recalled again (that would pay for them twice)
   (a.chunks || []).forEach(c => { if (!inPrompt.has(c.from)) docs.push({ id: 'C:' + c.from, text: 'CHAPTER (turns ' + c.from + '-' + c.to + '): ' + c.text, t: tok(c.text) }); });   // older summaries stay searchable after they leave the prompt
-  // Earlier stories this one continues ("Same cast, new story", followed back up to five links): their chapters and turns are searched
+  // Earlier stories this one continues ("Same cast, new story", followed all the way back): their chapters and turns are searched
   // too, so asking about something from a past game finds it. Their lore already lives in this story. Semantic recall uses the vectors
   // saved with them while they were played; nothing new is embedded for them.
   const past = [], linked = !/fresh|prequel/i.test(curatorAnswer(a, 'link') || '');   // a fresh start or prequel: the earlier events have not happened
-  for (let n = linked && a.sequelOf, seen = new Set([a]); n && db.adventures[n] && !seen.has(db.adventures[n]) && seen.size < 6; n = db.adventures[n].sequelOf) {
+  for (let n = linked && a.sequelOf, seen = new Set([a]); n && db.adventures[n] && !seen.has(db.adventures[n]); n = db.adventures[n].sequelOf) {
     const s = db.adventures[n], tag = 'EARLIER STORY "' + n + '", '; seen.add(s);
     (s.chunks || []).forEach(c => past.push({ id: 'C:' + c.from, src: s, tag, text: 'CHAPTER (turns ' + c.from + '-' + c.to + '): ' + c.text, t: tok(c.text) }));
     (s.transcript || []).forEach(t => past.push({ id: 'T:' + t.n, src: s, tag, text: 'T' + t.n + ' ' + t.role + ': ' + t.text, t: tok(t.text) }));
