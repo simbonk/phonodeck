@@ -71,6 +71,7 @@ const loreLine = e => 'LORE ' + e.name + ' (' + e.type + (e.hidden ? '; the play
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const wordIn = (text, n, exact) => new RegExp('(^|[^\\p{L}\\p{N}])' + reEsc(n) + '(?![\\p{L}\\p{N}])', exact ? 'u' : 'iu').test(text);
 const namedIn = (text, e) => [e.name, ...(e.aliases || []), e.role].map(n => String(n || '').trim()).filter(Boolean).some(n => wordIn(text, n));
+const partNamedIn = (text, e) => String(e.name || '').split(/\s+/).filter(w => w.length > 3 && !TITLE.test(w) && !/['’]s$/i.test(w)).some(w => wordIn(text, w));   // any one word of the name ("Roadster")
 // The hidden name counts as revealed once it is said in the story: the full name, or the first name ("Walter" for Walter Pruitt), matching
 // case, so a name that is also a word ("Grace") is not given away by "an unhurried grace".
 const TITLE = /^(the|captain|capt|commander|doctor|dr|mr|mrs|ms|miss|sir|lady|lord|inspector|father|mother|sister|brother|uncle|aunt|auntie|professor|prof|madame|monsieur)\.?$/i;
@@ -136,12 +137,14 @@ async function takeTurn(input, hidden, onDelta) {
       // The people seen most recently come along too, even when unnamed in the text ("the man", "the old dog"), so the memory call can
       // match a description to the entry it belongs to instead of starting a duplicate.
       const said = input + ' ' + reply, byRecent = (x, y) => (y.lastSeen || 0) - (x.lastSeen || 0);
+      // Entries mentioned only by part of their name ("the roadster" for the Auburn Roadster) come along too, so they are updated, not duplicated.
       const named = Object.values(a.lore).filter(e => namedIn(said, e)).sort(byRecent).slice(0, 12);
-      const known = [...new Set([...named, ...Object.values(a.lore).filter(e => e.type === 'person' && !e.isPlayer).sort(byRecent).slice(0, 6)])];
+      const partly = Object.values(a.lore).filter(e => !named.includes(e) && partNamedIn(said, e)).sort(byRecent).slice(0, 6);
+      const known = [...new Set([...named, ...partly, ...Object.values(a.lore).filter(e => e.type === 'person' && !e.isPlayer).sort(byRecent).slice(0, 6)])];
       const ex = await chat('extract', [{ role: 'system', content: extractRules(a) },
         { role: 'user', content: (changes.length ? 'PLAYER CHANGES (authoritative; update any affected entries to match them):\n' + changes.map(c => '- ' + c.text).join('\n') + '\n' : '') + 'FEELING TO ACHIEVE: ' + feelingOf(a) + '\nKnown location: ' + a.location +
           (isSim(a) ? "\nPlayer's goal: " + (goalOf(a) || '(open)') : '\nCurrent beats:\n' + (a.beats.filter(b => b.status !== 'done').slice(-12).map(b => '- [' + b.status + '] ' + b.beat).join('\n') || '(none)')) +
-          '\nKNOWN LORE (entries named in this exchange, and the people seen most recently; the id is in brackets):\n' + (known.map(e => '[' + e.id + '] ' + loreLine(e)).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
+          '\nKNOWN LORE (entries named in this exchange, and the people seen most recently; the id is in brackets):\n' + (known.map(e => '[' + e.id + '] ' + loreLine(e) + (e.byPlayer ? (e.playerDesc && e.playerDesc !== e.desc ? ' [PLAYER WROTE: ' + e.playerDesc + ']' : ' [PLAYER WROTE this]') : '')).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
       applyExtraction(a, ex, said);
     } catch (e) { console.warn('memory extraction skipped', e); }
     persist(name);
@@ -167,16 +170,24 @@ function applyExtraction(a, raw, said) {
     const role = String(e.role || '').trim();
     // The id wins: that is how a stranger who finally gives their name, or a corrected spelling, lands on the entry it belongs to.
     let cur = (e.id && a.lore[String(e.id).trim()]) || findLore(a, name);
+    // A near-miss name for something already in the lore ("Nadine's Auburn Roadster") joins that entry as an alias instead of starting a duplicate.
+    const similar = !cur && findSimilarLore(a, name, e.type); if (similar) cur = similar;
     if (!cur) cur = addLore(a, Object.assign({ name, type: 'other', desc: '' }, e.hidden === true && role ? { hidden: true, role } : {}));
-    if (!cur.byPlayer) {   // never overwrite an entry the player wrote by hand
+    if (!cur.byPlayer) {   // the player's own name, type and role for an entry they wrote by hand are never changed
       if (e.type) cur.type = e.type;
       const clash = findLore(a, name);   // renamed or finally named: the old name becomes an alias, unless another entry already has the new one
       // A hidden name only changes when the story itself says a different one, so a description ("Fisherman") never replaces it.
-      if (name.toLowerCase() !== cur.name.toLowerCase() && (!clash || clash === cur) && (!cur.hidden || (e.hidden === false && nameSaid(said || '', { name })))) { cur.aliases = [...(cur.aliases || []), cur.name]; cur.name = name; }
+      if (!similar && name.toLowerCase() !== cur.name.toLowerCase() && (!clash || clash === cur) && (!cur.hidden || (e.hidden === false && nameSaid(said || '', { name })))) { cur.aliases = [...(cur.aliases || []), cur.name]; cur.name = name; }
       if (role && cur.hidden) cur.role = role;
-      const d = String(e.desc || '').trim();
-      if (d && d !== cur.desc) { if (cur.desc) { cur.history = (cur.history || []).concat({ t: n, desc: cur.desc }).slice(-4); cur.changedAt = n; } cur.desc = d; }   // living lore: keep the last few versions
     }
+    // Living lore, hand-edited entries included: what happens in play keeps being added (the memory call is shown the player's own words
+    // and keeps them). The last few versions are kept.
+    const d = String(e.desc || '').trim();
+    if (d && d !== cur.desc) {
+      if (cur.byPlayer && cur.playerDesc == null) cur.playerDesc = cur.desc;   // an edit saved before playerDesc existed
+      if (cur.desc) { cur.history = (cur.history || []).concat({ t: n, desc: cur.desc }).slice(-4); cur.changedAt = n; } cur.desc = d;
+    }
+    if (similar && name.toLowerCase() !== cur.name.toLowerCase()) cur.aliases = [...(cur.aliases || []), name];
     if (e.hidden === false) cur.hidden = false;
     cur.aliases = [...new Set([...(cur.aliases || []), ...(e.aliases || [])].map(x => String(x || '').trim()))].filter(x => x && x.toLowerCase() !== cur.name.toLowerCase()); cur.lastSeen = n;
     if (cur.type === 'place') addPlace(a, cur.name);
@@ -211,8 +222,8 @@ async function refreshBible(a) {
   if (nb && nb.trim() && a.bible === before) { a.bible = stripWishes(nb.trim()) + '\n\n' + wishes; if (a.bibleSeen === before) a.bibleSeen = a.bible; }   // skip if you edited the bible while this refresh was running
 }
 // ---------------- Player edits: hand changes to the bible or lore override earlier narration ----------------
-// Bible edits are diffed against the version the GM last saw; lore saves are recorded directly and the entry is pinned (the AI no longer
-// rewrites it). Each change stays in the prompt as a PLAYER CHANGE until the old narration has left the verbatim transcript window.
+// Bible edits are diffed against the version the GM last saw; lore saves are recorded directly and the entry is pinned (always in the
+// prompt; the memory call keeps the player's words and only adds what happens in play). Each change stays in the prompt as a PLAYER CHANGE until the old narration has left the verbatim transcript window.
 const lineDiff = (o, n) => { const old = new Set(String(o || '').split('\n').map(s => s.trim())); return String(n || '').split('\n').map(s => s.trim()).filter(s => s && !old.has(s)); };
 function noteChange(a, text) { a.changes = (a.changes || []).filter(c => c.text !== text).concat({ text, turn: playerTurns(a) }).slice(-12); a.notesStale = true; }
 const liveChanges = a => (a.changes || []).filter(c => playerTurns(a) - c.turn <= Math.ceil(RECENT_N() / 2) + 1);
@@ -447,8 +458,8 @@ function renderLore() {
   const rank = e => e.isPlayer ? 0 : ({ person: 1, place: 2, faction: 3, item: 4 }[e.type] || 5);
   const shown = e => e.hidden && e.role ? cap1(e.role) : e.name;
   html += Object.entries(a.lore).sort((x, y) => rank(x[1]) - rank(y[1]) || shown(x[1]).localeCompare(shown(y[1]))).map(([k, e]) => loreEditing === k ? form(k, e) :
-    '<div class="card"><b>' + esc(shown(e)) + '</b> <span class="tag">' + (e.isPlayer ? 'main character (you) &middot; ' : '') + esc(typeLabel(e.type)) + (e.hidden && e.role ? ' &middot; name not revealed yet' : '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(mask(e.aliases.join(', '))) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (the AI keeps it as written)' : '') + (e.changedAt && !e.byPlayer ? ' &middot; &#10227; updated in play (turn ' + Math.ceil(e.changedAt / 2) + ')' : '') + '</span><br>' + esc(mask(e.desc)) +
-    (e.history && e.history.length && !e.byPlayer ? '<details class="tag"><summary>Earlier versions</summary>' + e.history.slice().reverse().map(h => '<div>Turn ' + Math.ceil(h.t / 2) + ': ' + esc(mask(h.desc)) + '</div>').join('') + '</details>' : '') +
+    '<div class="card"><b>' + esc(shown(e)) + '</b> <span class="tag">' + (e.isPlayer ? 'main character (you) &middot; ' : '') + esc(typeLabel(e.type)) + (e.hidden && e.role ? ' &middot; name not revealed yet' : '') + (e.aliases && e.aliases.length ? ' &middot; aka ' + esc(mask(e.aliases.join(', '))) : '') + (e.byPlayer ? ' &middot; &#9998; your edit (always kept; play adds to it)' : '') + (e.changedAt ? ' &middot; &#10227; updated in play (turn ' + Math.ceil(e.changedAt / 2) + ')' : '') + '</span><br>' + esc(mask(e.desc)) +
+    (e.history && e.history.length ? '<details class="tag"><summary>Earlier versions</summary>' + e.history.slice().reverse().map(h => '<div>Turn ' + Math.ceil(h.t / 2) + ': ' + esc(mask(h.desc)) + '</div>').join('') + '</details>' : '') +
     '<br><button class="mini" data-act="edit" data-k="' + q(k) + '">Edit</button><button class="mini" data-act="merge" data-k="' + q(k) + '">Merge into...</button><button class="mini" data-act="del" data-k="' + q(k) + '">Delete</button></div>').join('');
   box.innerHTML = html;
 }
@@ -462,6 +473,7 @@ function saveLore(k) {
   const e = Object.assign(old || { id: newLoreId(a) }, { name, type, desc, aliases: $('loreAliases').value.split(',').map(s => s.trim()).filter(Boolean), lastSeen: old ? old.lastSeen : a.transcript.length,
     byPlayer: changed || !!(old && old.byPlayer), editedAt: changed ? Date.now() : (old && old.editedAt), isPlayer: !!(old && old.isPlayer), role, hidden });
   if (!role) delete e.role; if (!hidden) delete e.hidden;
+  if (changed) { e.playerDesc = desc; delete e.changedAt; }   // the player's own words, which later updates from play keep
   a.lore[e.id] = e;
   if (changed) noteChange(a, 'Lore ' + (old && old.name !== name ? '("' + old.name + '" is now "' + name + '") ' : '') + loreLine(e).slice(5));
   if (a.undo) { a.undo.mem.lore = a.undo.mem.lore || {}; if (other && other !== old) delete a.undo.mem.lore[other.id]; a.undo.mem.lore[e.id] = structuredClone(e); a.undo.mem.changes = structuredClone(a.changes); }   // so Undo never reverts a hand edit
