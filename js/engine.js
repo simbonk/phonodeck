@@ -271,6 +271,16 @@ async function retrieve(a, input, recentStart) {
   a.transcript.slice(0, recentStart).forEach(t => docs.push({ id: 'T:' + t.n, text: 'T' + t.n + ' ' + t.role + ': ' + t.text, t: tok(t.text) }));
   const inPrompt = new Set((a.chunks || []).slice(-tune('chapters')).map(c => c.from));   // chapters already in the prompt are not recalled again (that would pay for them twice)
   (a.chunks || []).forEach(c => { if (!inPrompt.has(c.from)) docs.push({ id: 'C:' + c.from, text: 'CHAPTER (turns ' + c.from + '-' + c.to + '): ' + c.text, t: tok(c.text) }); });   // older summaries stay searchable after they leave the prompt
+  // Earlier stories this one continues ("Same cast, new story", followed back up to five links): their chapters and turns are searched
+  // too, so asking about something from a past game finds it. Their lore already lives in this story. Semantic recall uses the vectors
+  // saved with them while they were played; nothing new is embedded for them.
+  const past = [], linked = !/fresh|prequel/i.test(curatorAnswer(a, 'link') || '');   // a fresh start or prequel: the earlier events have not happened
+  for (let n = linked && a.sequelOf, seen = new Set([a]); n && db.adventures[n] && !seen.has(db.adventures[n]) && seen.size < 6; n = db.adventures[n].sequelOf) {
+    const s = db.adventures[n], tag = 'EARLIER STORY "' + n + '", '; seen.add(s);
+    (s.chunks || []).forEach(c => past.push({ id: 'C:' + c.from, src: s, tag, text: 'CHAPTER (turns ' + c.from + '-' + c.to + '): ' + c.text, t: tok(c.text) }));
+    (s.transcript || []).forEach(t => past.push({ id: 'T:' + t.n, src: s, tag, text: 'T' + t.n + ' ' + t.role + ': ' + t.text, t: tok(t.text) }));
+  }
+  docs.push(...past);
   const lastGm = [...a.transcript].reverse().find(t => t.role === 'gm');
   const query = input + (lastGm ? ' ' + lastGm.text.slice(-300) : '');   // short replies like "yes" or "open it" still need context to find the right memories
   const lex = bm25(docs, query, 12);
@@ -279,18 +289,19 @@ async function retrieve(a, input, recentStart) {
     try {
       const model = S().fake ? 'fake' : embedModel();
       const sig = d => model + ':' + hstr(d.text);
-      const need = docs.filter(d => !a.emb[d.id] || a.emb[d.id].s !== sig(d)).slice(0, 96);
+      const vec = d => { const x = ((d.src || a).emb || {})[d.id]; return x && x.s === sig(d) ? x.v : null; };
+      const need = docs.filter(d => !d.src && !vec(d)).slice(0, 96);
       if (need.length) embed(need.map(d => d.text.slice(0, 2000))).then(vs => { need.forEach((d, i) => a.emb[d.id] = { s: sig(d), v: vs[i] }); embedFails = 0; persist(); })
         .catch(embedFailed);   // background: never delay the reply
       const [qv] = await Promise.race([embed([query.slice(0, 2000)]), new Promise(res => setTimeout(() => res([null]), 1000))]);   // skip semantic recall if slow
-      if (qv) sem = docs.filter(d => a.emb[d.id] && a.emb[d.id].v.length === qv.length)
-        .map(d => ({ d, s: cosine(qv, a.emb[d.id].v) })).filter(x => x.s > 0.2).sort((x, y) => y.s - x.s).slice(0, 12).map(x => x.d);
+      if (qv) sem = docs.filter(d => { const v = vec(d); return v && v.length === qv.length; })
+        .map(d => ({ d, s: cosine(qv, vec(d)) })).filter(x => x.s > 0.2).sort((x, y) => y.s - x.s).slice(0, 12).map(x => x.d);
     } catch (e) { embedFailed(e); }
   }
   const score = new Map();   // reciprocal rank fusion of keyword + semantic rankings
   [lex, sem].forEach(list => list.forEach((d, i) => score.set(d, (score.get(d) || 0) + 1 / (60 + i))));
   const qt = new Set(tok(query));
-  const top = [...score.entries()].sort((x, y) => y[1] - x[1]).slice(0, tune('recall')).map(x => brief(x[0], qt)).filter(x => !hits.includes(x));
+  const top = [...score.entries()].sort((x, y) => y[1] - x[1]).slice(0, tune('recall')).map(x => (x[0].tag || '') + brief(x[0], qt)).filter(x => !hits.includes(x));
   const out = []; let room = RECALL_CHARS;   // keep the recalled block small (about 650 tokens); named lore comes first
   for (const x of [...hits, ...top]) { if (out.length && x.length > room) break; out.push(x); room -= x.length; }
   return out;
