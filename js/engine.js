@@ -103,8 +103,8 @@ async function takeTurn(input, hidden, onDelta) {
   else if (a.bible !== a.bibleSeen) lineDiff(a.bibleSeen, a.bible).slice(0, 8).forEach(l => noteChange(a, 'Story bible now says: ' + l.slice(0, 300)));
   const bibleNow = a.bible;
   holoStage = 'recalling memories';
-  const pinned = pinnedLore(a), pinnedLines = pinned.map(loreLine);
-  const memList = (await retrieve(a, input, recentStart)).filter(x => !pinnedLines.includes(x));   // pinned entries are already in the prompt
+  const pinned = pinnedLore(a), pinnedLines = pinned.map(pinnedLine), pinnedKeys = pinned.map(loreLine);
+  const memList = (await retrieve(a, input, recentStart)).filter(x => !pinnedKeys.includes(x));   // pinned entries are already in the prompt
   holoStage = 'waiting for the story model';
   const mem = memList.map(x => '- ' + x).join('\n') || '(none)';
   const changes = liveChanges(a), hidden_ = hiddenPeople(a);
@@ -118,7 +118,7 @@ async function takeTurn(input, hidden, onDelta) {
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
     '\n\n## HOW EACH TURN ARRIVES\nThe latest message starts with a private GAME MASTER BRIEFING for this reply only (mission map, recalled memories, director notes, player changes), then the player\'s action. Follow the briefing, never mention or quote it, and reply to the action.';
-  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
+  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES' + (pinned.length || changes.length ? ' (older narration and notes: where one disagrees with PLAYER-SET FACTS or PLAYER CHANGES, it was written before the player corrected it, so the player\'s version wins)' : '') + '\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
     (hidden_.length ? '\n\n## PEOPLE THE PLAYER DOES NOT KNOW BY NAME YET (see INTRODUCTIONS; use the role until the name is revealed)\n' + hidden_.map(e => '- "' + (e.role || 'a stranger') + '" is really ' + e.name).join('\n') : '') +
     (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '') +
     '\n[END OF BRIEFING]\n\n' + (hidden ? 'INSTRUCTION: ' : 'THE PLAYER: ') + input;
@@ -141,11 +141,12 @@ async function takeTurn(input, hidden, onDelta) {
       const named = Object.values(a.lore).filter(e => namedIn(said, e)).sort(byRecent).slice(0, 12);
       const partly = Object.values(a.lore).filter(e => !named.includes(e) && partNamedIn(said, e)).sort(byRecent).slice(0, 6);
       const known = [...new Set([...named, ...partly, ...Object.values(a.lore).filter(e => e.type === 'person' && !e.isPlayer).sort(byRecent).slice(0, 6)])];
+      const asked = Date.now();
       const ex = await chat('extract', [{ role: 'system', content: extractRules(a) },
         { role: 'user', content: (changes.length ? 'PLAYER CHANGES (authoritative; update any affected entries to match them):\n' + changes.map(c => '- ' + c.text).join('\n') + '\n' : '') + 'FEELING TO ACHIEVE: ' + feelingOf(a) + '\nKnown location: ' + a.location +
           (isSim(a) ? "\nPlayer's goal: " + (goalOf(a) || '(open)') : '\nCurrent beats:\n' + (a.beats.filter(b => b.status !== 'done').slice(-12).map(b => '- [' + b.status + '] ' + b.beat).join('\n') || '(none)')) +
           '\nKNOWN LORE (entries named in this exchange, and the people seen most recently; the id is in brackets):\n' + (known.map(e => '[' + e.id + '] ' + loreLine(e) + (e.byPlayer ? (e.playerDesc && e.playerDesc !== e.desc ? ' [PLAYER WROTE: ' + e.playerDesc + ']' : ' [PLAYER WROTE this]') : '')).join('\n') || '(none)') + '\nPLAYER: ' + input + '\nGAME MASTER: ' + reply }]);
-      applyExtraction(a, ex, said);
+      applyExtraction(a, ex, said, asked);
     } catch (e) { console.warn('memory extraction skipped', e); }
     persist(name);
     if (db.current === name) { renderMap(); if (!loreEditing) renderLore(); }
@@ -162,7 +163,7 @@ async function takeTurn(input, hidden, onDelta) {
   });
   return reply;
 }
-function applyExtraction(a, raw, said) {
+function applyExtraction(a, raw, said, asked) {
   const i = raw.indexOf('{'), j = raw.lastIndexOf('}'); if (i < 0 || j < i) return;
   const o = JSON.parse(raw.slice(i, j + 1)), n = a.transcript.length;
   (o.lore || []).forEach(e => {
@@ -183,7 +184,8 @@ function applyExtraction(a, raw, said) {
     // Living lore, hand-edited entries included: what happens in play keeps being added (the memory call is shown the player's own words
     // and keeps them). The last few versions are kept.
     const d = String(e.desc || '').trim();
-    if (d && d !== cur.desc) {
+    // An entry the player edited while this call was running keeps their edit: the call was shown the old version.
+    if (d && d !== cur.desc && !(asked && (cur.editedAt || 0) > asked)) {
       if (cur.byPlayer && cur.playerDesc == null) cur.playerDesc = cur.desc;   // an edit saved before playerDesc existed
       if (cur.desc) { cur.history = (cur.history || []).concat({ t: n, desc: cur.desc }).slice(-4); cur.changedAt = n; } cur.desc = d;
     }
@@ -227,10 +229,14 @@ async function refreshBible(a) {
 const lineDiff = (o, n) => { const old = new Set(String(o || '').split('\n').map(s => s.trim())); return String(n || '').split('\n').map(s => s.trim()).filter(s => s && !old.has(s)); };
 function noteChange(a, text) { a.changes = (a.changes || []).filter(c => c.text !== text).concat({ text, turn: playerTurns(a) }).slice(-12); a.notesStale = true; }
 const liveChanges = a => (a.changes || []).filter(c => playerTurns(a) - c.turn <= Math.ceil(RECENT_N() / 2) + 1);
-const pinnedLore = a => Object.values(a.lore).filter(e => e.byPlayer).sort((x, y) => (y.editedAt || 0) - (x.editedAt || 0)).slice(0, 15);
+// Hand edits accumulate (across continued sessions and "Same cast" stories), so the cap is generous; the newest edits come first.
+const pinnedLore = a => Object.values(a.lore).filter(e => e.byPlayer).sort((x, y) => (y.editedAt || 0) - (x.editedAt || 0)).slice(0, 30);
+// Play keeps rewriting an edited entry's description, so the player's own words ride along wherever the entry is a PLAYER-SET FACT:
+// a correction can never be worn away by later rewrites.
+const pinnedLine = e => loreLine(e) + (e.playerDesc && e.playerDesc.trim() !== String(e.desc || '').trim() ? ' [THE PLAYER WROTE: ' + e.playerDesc + ' (their words win wherever the two differ)]' : '');
 function playerFactsText(a) {   // for background calls (bible refresh, GM notes): what the player set by hand, which beats the transcript
   const p = pinnedLore(a), c = liveChanges(a);
-  return p.length || c.length ? 'PLAYER-SET FACTS (written by the player; keep them exactly, even where the transcript says otherwise):\n' + [...c.map(x => x.text), ...p.map(loreLine)].map(x => '- ' + x).join('\n') + '\n\n' : '';
+  return p.length || c.length ? 'PLAYER-SET FACTS (written by the player; keep them exactly, even where the transcript says otherwise):\n' + [...c.map(x => x.text), ...p.map(pinnedLine)].map(x => '- ' + x).join('\n') + '\n\n' : '';
 }
 // The Player's Wishes block closes the bible. (The Spanish heading from a previous version is still recognised.)
 const WISH_HEAD = "## Player's Wishes (from the Experience Curator)", WISH_HEADS = [WISH_HEAD, '## Deseos del jugador (del Curador de Experiencias)'];

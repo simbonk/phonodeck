@@ -439,7 +439,7 @@ function sourceWorld(src, name) {   // everything the architect needs to bring a
   const who = curatorAnswer(src, 'who'), traits = curatorAnswer(src, 'traits'), pinned = pinnedLore(src);
   return 'SOURCE WORLD (from the earlier adventure "' + name + '"):\nBIBLE:\n' + stripWishes(src.bible) +
     '\n\nTHE PLAYER CHARACTER THEN: ' + (who || '(see bible)') + (traits ? '; ' + traits : '') +
-    (pinned.length ? '\n\nPLAYER-SET FACTS (keep exactly):\n' + pinned.map(loreLine).join('\n') : '') +
+    (pinned.length ? '\n\nPLAYER-SET FACTS (keep exactly):\n' + pinned.map(pinnedLine).join('\n') : '') +
     '\n\nLORE (returning cast, places, factions, items):\n' + Object.values(src.lore).slice(0, 80).map(loreLine).join('\n') +
     '\n\nCHARACTER AGENDAS AT THE END:\n' + ((g.cast || []).map(c => '- ' + c.name + ': wants ' + c.wants + '; fears ' + c.fears + '; secret: ' + c.secret).join('\n') || '(none)') +
     '\n\nWHAT HAPPENED IN THAT STORY:\n' + story + '\n\nHOW IT ENDED:\n' + src.transcript.filter(t => t.role === 'gm').slice(-1).map(t => t.text.slice(0, 1500)).join('');

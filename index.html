@@ -188,12 +188,13 @@
   </main>
   <div id="usageBar" class="tag" style="padding:4px 10px;border-top:1px solid var(--line);font-size:12px" title="Estimated from token counts returned by the API. Edit prices in Settings > Story &amp; cost."></div>
   <div id="voiceStatus" class="tag" style="display:none;padding:4px 10px;border-top:1px solid var(--line)"></div>
-  <div id="composer">
-    <textarea id="input" placeholder="What do you do?"></textarea>
-    <button id="undoBtn" title="Undo last turn (restores memory too)">&#8630;</button>
-    <button id="micBtn" title="Hands-free: the microphone stays on; say 'make it so' to send">&#127911; Hands-free</button>
-    <button id="send" class="primary">Send</button>
-  </div>
+  <!-- Its own form, so iPhone Safari does not group the story box with the name fields elsewhere on the page and offer "AutoFill Contact". -->
+  <form id="composer" autocomplete="off" onsubmit="return false">
+    <textarea id="input" name="action" placeholder="What do you do?" autocomplete="off" autocorrect="on" autocapitalize="sentences" spellcheck="true"></textarea>
+    <button type="button" id="undoBtn" title="Undo last turn (restores memory too)">&#8630;</button>
+    <button type="button" id="micBtn" title="Hands-free: the microphone stays on; say 'make it so' to send">&#127911; Hands-free</button>
+    <button type="button" id="send" class="primary">Send</button>
+  </form>
 </div>
 
 <!-- START SCREEN -->
@@ -300,7 +301,7 @@
     <button class="big" id="pickBuild">&#10022; Build the world myself<small>Start from a blank slate: the feeling you want, how you want to play, an optional photo to paint the world from, then a few questions with suggestions tailored to you.</small></button>
     <div id="curPresets"><div class="tag" style="margin:14px 0 6px">CURATED EXPERIENCES</div><div id="presetChips"></div></div>
   </div>
-  <textarea id="curA" placeholder="Type your own answer, or tap options above..."></textarea>
+  <form autocomplete="off" onsubmit="return false"><textarea id="curA" name="answer" placeholder="Type your own answer, or tap options above..." autocomplete="off"></textarea></form>
   <div id="curSuggestRow" style="display:none;margin:4px 0 8px"><button id="curSuggest" class="mini">Make some suggestions</button></div>
   <div class="nav2">
     <button id="curBack">Back</button>
