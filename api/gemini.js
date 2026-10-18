@@ -1,7 +1,7 @@
 // Forwards an invited guest's Gemini calls to Google with Simon's key, and charges what each call cost to the guest's invite.
 // The key lives only in the GEMINI_KEY environment variable; nothing here ever sends it back to a browser.
 // POST /api/gemini?p=chat|embed|tts  with the header x-invite: <code>, and the same JSON body the game would send to Google.
-import { PRICES, cost, getInvite, summary, redis, monthKey, ceiling, tooManyBad, noteBad, json } from './_lib.js';
+import { PRICES, cost, getInvite, summary, redis, monthKey, monthSpend, tooManyBad, noteBad, json } from './_lib.js';
 
 const GOOGLE = () => process.env.GEMINI_BASE || 'https://generativelanguage.googleapis.com/v1beta';
 const PATHS = { chat: '/openai/chat/completions', embed: '/openai/embeddings', tts: '/interactions' };
@@ -14,9 +14,9 @@ export async function POST(req) {
   if (await tooManyBad(req)) return json({ error: 'slow_down' }, 429);
   const inv = await getInvite(req.headers.get('x-invite'));
   if (!inv) { await noteBad(req); return json({ error: 'invite_invalid' }, 403); }
-  const [month] = await redis(['GET', monthKey()]);
+  const { month, ceiling } = await monthSpend();
   const story = req.headers.get('x-holo-kind') === 'gm';   // a new story turn: refused once the allowance is used; anything else gets a little grace
-  const reason = inv.status !== 'active' ? 'paused' : +month >= ceiling() ? 'ceiling' : inv.spent >= inv.allow * (story ? 1 : GRACE) ? 'used' : '';
+  const reason = inv.status !== 'active' ? 'paused' : month >= ceiling ? 'ceiling' : inv.spent >= inv.allow * (story ? 1 : GRACE) ? 'used' : '';
   if (reason) return json({ error: 'quota', reason, invite: summary(inv) }, 402);
 
   let body; try { body = await req.json(); } catch (e) { return json({ error: 'bad_json' }, 400); }

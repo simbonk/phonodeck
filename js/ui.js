@@ -338,7 +338,7 @@ $('wSkip').onclick = closeWelcome;
 function guestWelcomeText() {
   const i = inviteInfo; if (!i) return;
   if (i.name) $('gwHello').textContent = 'Hi ' + i.name + ', you have been invited to play.';
-  $('gwLeft').textContent = i.status !== 'active' ? INVITE_OFF_MSG : i.minutesLeft > 0 ? 'Your invite has about ' + i.minutesLeft + ' minutes of play.' : QUOTA_MSG;
+  $('gwLeft').textContent = i.status !== 'active' ? INVITE_OFF_MSG : i.ceiling ? CEILING_MSG : i.minutesLeft > 0 ? 'Your invite has about ' + i.minutesLeft + ' minutes of play.' : QUOTA_MSG;
 }
 // The "Why" on both welcome screens, in Simon's own words.
 const WHY_HTML = '<details class="why"><summary>Why</summary>' +
@@ -408,12 +408,15 @@ const inviteLink = c => location.origin + location.pathname + '?invite=' + c;
 const money = n => '$' + (+n).toFixed(2);
 function admRender(o) {
   $('admLogin').style.display = 'none'; $('admMain').style.display = '';
+  const full = o.month >= o.ceiling;   // the monthly ceiling stops every invite, whatever its own allowance says
   $('admList').innerHTML = !o.invites.length ? '<p class="tag">No invites yet.</p>' : '<table class="adm"><tr><th>Name</th><th>Allowance</th><th>Used</th><th>Left</th><th>Last played</th><th>Status</th><th></th></tr>' +
     o.invites.map(i => '<tr><td><b>' + esc(i.name) + '</b><br><span class="tag">' + esc(i.code) + '</span></td><td>' + money(i.allow) + '</td><td>' + money(i.spent) + '<br><span class="tag">' + i.minutesPlayed + ' min</span></td>' +
-      '<td>about ' + i.minutesLeft + ' min</td><td>' + (i.last ? new Date(i.last).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '-') + '</td><td>' + (i.status === 'active' ? 'Active' : 'Paused') + '</td>' +
+      '<td>about ' + i.minutesLeft + ' min</td><td>' + (i.last ? new Date(i.last).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '-') + '</td><td>' + (i.status !== 'active' ? 'Paused' : full ? '<b class="warn">Stopped</b><br><span class="tag">monthly ceiling</span>' : 'Active') + '</td>' +
       '<td><button data-act="copy" data-code="' + esc(i.code) + '">Copy link</button><button data-act="add" data-code="' + esc(i.code) + '">Add more</button>' +
       '<button data-act="' + (i.status === 'active' ? 'pause' : 'resume') + '" data-code="' + esc(i.code) + '">' + (i.status === 'active' ? 'Pause' : 'Resume') + '</button><button data-act="delete" data-code="' + esc(i.code) + '" data-name="' + esc(i.name) + '">Delete</button></td></tr>').join('') + '</table>';
-  $('admTotals').textContent = 'Guests this month: ' + money(o.month) + ' of the ' + money(o.ceiling) + ' monthly ceiling (every invite stops if it is reached). All time: ' + money(o.total) + '.';
+  $('admTotals').innerHTML = (full ? '<b class="warn">The monthly ceiling is reached, so every invite is stopped until next month or until you raise it.</b><br>' : '') +
+    'Guests this month: ' + money(o.month) + ' of the ' + money(o.ceiling) + ' monthly ceiling (every invite stops if it is reached). All time: ' + money(o.total) + '. ' +
+    '<button data-act="ceiling" data-ceiling="' + o.ceiling + '">Change ceiling</button>';
 }
 async function admRun(action, extra, done) {
   $('admMsg').textContent = '';
@@ -436,6 +439,7 @@ $('admin').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return; const code = b.dataset.code, act = b.dataset.act;
   if (act === 'copy') copyLink(code);
   else if (act === 'add') { const v = prompt('Add how many dollars? (about 10 cents a minute)', '3'); if (v && +v > 0) admRun('add', { code, amount: +v }); }
+  else if (act === 'ceiling') { const v = prompt('Monthly ceiling for all guests together, in dollars (0 goes back to the default):', b.dataset.ceiling); if (v !== null && v.trim() !== '' && +v >= 0) admRun('ceiling', { amount: +v }); }
   else if (act === 'delete') { if (confirm('Delete the invite for ' + b.dataset.name + '? Their link stops working.')) admRun('delete', { code }); }
   else admRun(act, { code });
 });

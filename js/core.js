@@ -40,15 +40,18 @@ const hasKey = () => !!S().key || guest();
 let inviteInfo = null;   // { name, minutesLeft, status } from the invite server
 const QUOTA_MSG = 'Your current invite quota is complete. Thank you for playing! If you would like more time, ask the person who invited you.';
 const INVITE_OFF_MSG = 'This invite is not active right now. Ask the person who invited you for a new link.';
-const inviteLine = () => !inviteInfo ? '' : inviteInfo.status !== 'active' ? INVITE_OFF_MSG : inviteInfo.minutesLeft > 0 ? 'About ' + inviteInfo.minutesLeft + ' minute' + (inviteInfo.minutesLeft === 1 ? '' : 's') + ' left on your invite' : 'Your current invite quota is complete.';
+const HOST_MSG = 'The phonodeck cannot reach its storyteller right now: the Gemini account it runs on is out of prepaid credit. Your invite still has its time. Ask the person who invited you to top it up.';
+const CEILING_MSG = 'Your invite still has time left, but the phonodeck has reached its monthly limit for all invited players. Ask the person who invited you to raise it.';
+const inviteLine = () => !inviteInfo ? '' : inviteInfo.status !== 'active' ? INVITE_OFF_MSG : inviteInfo.ceiling ? 'Paused: the monthly limit for invited players is reached' : inviteInfo.minutesLeft > 0 ? 'About ' + inviteInfo.minutesLeft + ' minute' + (inviteInfo.minutesLeft === 1 ? '' : 's') + ' left on your invite' : 'Your current invite quota is complete.';
 function inviteNote(r) {   // every answer from the invite server says about how many minutes are left
-  const m = r.headers.get('x-invite-minutes'); if (m !== null && inviteInfo && inviteInfo.status === 'active') { inviteInfo.minutesLeft = +m; showUsage(); }
+  const m = r.headers.get('x-invite-minutes'); if (m !== null && inviteInfo && inviteInfo.status === 'active') { inviteInfo.minutesLeft = +m; inviteInfo.ceiling = false; showUsage(); }
 }
 async function inviteError(r) {   // 402: the allowance, the invite or the monthly ceiling is used up; 403: the code is not valid
   let o = {}; try { o = await r.json(); } catch (e) {}
-  const off = r.status === 403 || o.reason === 'paused';
-  if (inviteInfo) { if (off) inviteInfo.status = 'off'; else inviteInfo.minutesLeft = 0; showUsage(); }
-  const e = new Error(off ? INVITE_OFF_MSG : QUOTA_MSG); e.quota = true; return e;
+  if (r.status === 402 && o.error !== 'quota') { const e = new Error(HOST_MSG); e.quota = true; return e; }   // Google's own 402: the host's prepaid Gemini credit ran out, not this invite
+  const off = r.status === 403 || o.reason === 'paused', ceil = o.reason === 'ceiling';   // the ceiling is shared by every guest, not this invite's own allowance
+  if (inviteInfo) { if (off) inviteInfo.status = 'off'; else if (ceil) inviteInfo.ceiling = true; else inviteInfo.minutesLeft = 0; showUsage(); }
+  const e = new Error(off ? INVITE_OFF_MSG : ceil ? CEILING_MSG : QUOTA_MSG); e.quota = true; return e;
 }
 async function loadInvite() {
   if (!guest()) return;
@@ -145,7 +148,7 @@ $('reconBtn').onclick = async () => {
 async function llmError(r, what) {   // plain-English explanation for the most common failures
   if (guest() && (r.status === 402 || r.status === 403)) return inviteError(r);
   const body = (await r.text()).slice(0, 250), hint = {
-    400: 'The request was rejected.', 401: 'The API key was not accepted. Check it in Settings > Connection.', 403: 'The key is not allowed to use "' + what + '". Press Test connection in Settings > Connection.',
+    400: 'The request was rejected.', 402: 'Your Gemini prepaid credit is used up. Top it up in Google AI Studio > Billing.', 401: 'The API key was not accepted. Check it in Settings > Connection.', 403: 'The key is not allowed to use "' + what + '". Press Test connection in Settings > Connection.',
     404: '"' + what + '" was not found (preview models get renamed or retired). Press Test connection in Settings > Connection and pick an available model.',
     429: 'Rate limit or daily quota reached. Wait a bit, or lower the voice and memory settings.',
     503: 'Google\'s service is busy right now. Wait a moment and try again.' }[r.status];
