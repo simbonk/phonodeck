@@ -41,7 +41,11 @@ export async function redis(...cmds) {   // one or more commands, as arrays; ret
 const hash = arr => { const o = {}; for (let i = 0; arr && i < arr.length; i += 2) o[arr[i]] = arr[i + 1]; return o; };
 
 export const monthKey = () => 'spend:' + new Date().toISOString().slice(0, 7);
-export const ceiling = () => +process.env.MONTHLY_CAP || 30;
+// The monthly ceiling: set from the admin page (stored as "ceiling"), else MONTHLY_CAP, else $30.
+export async function monthSpend() {
+  const [m, c] = await redis(['GET', monthKey()], ['GET', 'ceiling']);
+  return { month: +m || 0, ceiling: +c || +process.env.MONTHLY_CAP || 30 };
+}
 export const normCode = c => String(c || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40);
 
 export async function getInvite(code) {

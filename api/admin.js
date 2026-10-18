@@ -1,6 +1,6 @@
 // POST /api/admin with the header x-admin-password and a JSON body { action, ... }. Every action re-checks the password.
-// Actions: list | create { name, allow } | add { code, amount } | pause { code } | resume { code } | delete { code }
-import { redis, getInvite, summary, newCode, normCode, monthKey, ceiling, tooManyBad, noteBad, same, json, DEFAULT_PER_MIN } from './_lib.js';
+// Actions: list | create { name, allow } | add { code, amount } | pause { code } | resume { code } | delete { code } | ceiling { amount }
+import { redis, getInvite, summary, newCode, normCode, monthSpend, tooManyBad, noteBad, same, json, DEFAULT_PER_MIN } from './_lib.js';
 
 export async function POST(req) {
   if (!process.env.ADMIN_PASSWORD) return json({ error: 'server_not_set_up', message: 'Set ADMIN_PASSWORD in Vercel, then redeploy.' }, 503);
@@ -20,9 +20,11 @@ export async function POST(req) {
     if (b.action === 'add') await redis(['HINCRBYFLOAT', 'inv:' + code, 'allow', money(b.amount)]);
     if (b.action === 'pause' || b.action === 'resume') await redis(['HSET', 'inv:' + code, 'status', b.action === 'pause' ? 'paused' : 'active']);
     if (b.action === 'delete') await redis(['DEL', 'inv:' + code], ['SREM', 'invites', code]);
+  } else if (b.action === 'ceiling') {   // 0 goes back to MONTHLY_CAP (or $30)
+    const v = money(b.amount); await redis(v ? ['SET', 'ceiling', v] : ['DEL', 'ceiling']);
   } else if (b.action !== 'list') return json({ error: 'unknown_action' }, 400);
 
-  const [codes, month, total] = await redis(['SMEMBERS', 'invites'], ['GET', monthKey()], ['GET', 'spend:total']);
+  const [[codes, total], { month, ceiling }] = await Promise.all([redis(['SMEMBERS', 'invites'], ['GET', 'spend:total']), monthSpend()]);
   const invites = (await Promise.all((codes || []).map(getInvite))).filter(Boolean).map(summary).sort((a, b) => b.created - a.created);
-  return json({ invites, month: +(+month || 0).toFixed(2), total: +(+total || 0).toFixed(2), ceiling: ceiling(), perMinute: DEFAULT_PER_MIN, created: made });
+  return json({ invites, month: +month.toFixed(2), total: +(+total || 0).toFixed(2), ceiling, perMinute: DEFAULT_PER_MIN, created: made });
 }

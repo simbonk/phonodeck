@@ -75,7 +75,7 @@ If the game is hosted on Vercel, you can let a few people play on your Gemini ke
 2. In **Settings > Environment Variables**, add:
    - `GEMINI_KEY`: your Gemini API key (billing set up).
    - `ADMIN_PASSWORD`: a password for the invites page.
-   - `MONTHLY_CAP` (optional): the most all guests together may spend in a month, in dollars. The default is 30.
+   - `MONTHLY_CAP` (optional): the most all guests together may spend in a month, in dollars. The default is 30. You can also change it on the invites page without a redeploy.
 3. Redeploy (Deployments > the latest one > Redeploy).
 
 ### Adding someone
