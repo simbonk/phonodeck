@@ -118,7 +118,7 @@ async function takeTurn(input, hidden, onDelta) {
     (pinned.length ? '\n\n## PLAYER-SET FACTS (written by the player; they override earlier narration, lore and notes)\n' + pinnedLines.map(x => '- ' + x).join('\n') : '') +
     '\n\n## STORY SO FAR (chapter summaries)\n' + chapters + '\n\n## PRIVATE GM NOTES (never reveal outright)\n' + gmText(a) +
     '\n\n## HOW EACH TURN ARRIVES\nThe latest message starts with a private GAME MASTER BRIEFING for this reply only (mission map, recalled memories, director notes, player changes), then the player\'s action. Follow the briefing, never mention or quote it, and reply to the action.';
-  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES' + (pinned.length || changes.length ? ' (older narration and notes: where one disagrees with PLAYER-SET FACTS or PLAYER CHANGES, it was written before the player corrected it, so the player\'s version wins)' : '') + '\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a) +
+  const briefing = '[GAME MASTER BRIEFING: private, for this reply only]\n## MISSION MAP\n' + mapText(a) + '\n## RELEVANT MEMORIES' + (pinned.length || changes.length ? ' (older narration and notes: where one disagrees with PLAYER-SET FACTS or PLAYER CHANGES, it was written before the player corrected it, so the player\'s version wins)' : '') + '\n' + mem + '\n\n## DIRECTOR NOTES FOR THIS REPLY\n' + directorNotes(a, !hidden && narrates(input)) +
     (hidden_.length ? '\n\n## PEOPLE THE PLAYER DOES NOT KNOW BY NAME YET (see INTRODUCTIONS; use the role until the name is revealed)\n' + hidden_.map(e => '- "' + (e.role || 'a stranger') + '" is really ' + e.name).join('\n') : '') +
     (changes.length ? '\n\n## PLAYER CHANGES (made by hand; they win over anything said earlier in this conversation. Apply them from this reply on as if they had always been true, e.g. new pronouns or descriptions, and do not comment on the change)\n' + changes.map(c => '- ' + c.text).join('\n') : '') +
     '\n[END OF BRIEFING]\n\n' + (hidden ? 'INSTRUCTION: ' : 'THE PLAYER: ') + input;
@@ -353,8 +353,16 @@ function humourFor(f) {   // { p: chance a reply is asked for humour, kinds: whi
   if (/exhilar|adventur|thrill|fun|mischie|funny|comed/i.test(f)) return { p: 0.8, kinds: HUMOR };
   return { p: 0.6, kinds: HUMOR };
 }
+// Writers often play by narrating: a passage of story prose, usually about their character in the third person, instead of a command.
+// Spotted here so the director stops adding its own beats and jokes on top of theirs (the GM rules say how to continue their prose).
+function narrates(text) {
+  const t = String(text || ''), words = t.split(/\s+/).filter(Boolean).length, sentences = (t.match(/[.!?](\s|$)/g) || []).length + (/[^.!?\s]\s*$/.test(t) ? 1 : 0);
+  if (words < 20 || sentences < 2) return false;
+  // Third-person prose has sentences that open on a subject ("The cat sits", "She stops"); commands open on a verb ("Ask her...").
+  return words >= 60 || (/(^|[.!?]["”']?\s+)(She|He|They|The|A|An|His|Her|Their)\b/.test(t) && !/\b(I|I'm|I'll|I've|I'd)\b|\b(me|my|mine|myself)\b/i.test(t));
+}
 const DISRUPT = ['complication', 'clock', 'world', 'seed', 'choice', 'npc'];   // the moves that pull the player back toward plot; benched while the feeling is landing
-function directorNotes(a) {
+function directorNotes(a, narr) {
   const turn = playerTurns(a) + 1, short = isShort(a), sim = isSim(a), left = a.left, final = left === 0, wrap = left != null && left <= 3;
   const m = a.mood || {}, happy = m.feeling >= 7 || !!m.hooked_on, roaming = !sim && (m.meandering || m.leaving_plot), calm = sim || happy || roaming;
   // Pacing: a calm phase ("savour") while the player is happy, roaming or in the simulator. Otherwise timed stories follow the clock
@@ -377,7 +385,8 @@ function directorNotes(a) {
   if (happy) lines.push('KEEP A GOOD THING GOING: the player is enjoying this' + (m.hooked_on ? ' (' + m.hooked_on + ')' : '') + '. Scrub plot points for now: no new complications, no interruptions, no other characters barging in, nothing following them. Deepen what is working.');
   if (roaming) lines.push((m.leaving_plot ? 'The player is leaving the plot behind. Let it go: it does not chase them, follow them or catch up with them. ' : 'The player is happily meandering. ') + 'Make wherever they are now worth being in; the plot can wait (or stay behind for good).');
   lines.push('PACING: ' + { rising: 'momentum is building; keep things moving and curious.', peak: 'this is a high-intensity beat; make it count and force a decisive moment.', release: 'aftermath and breathing room; let consequences land, then open a fresh hook.', savour: 'stay in the moment and let it breathe; no new problems, just more of what the player came for.' }[phase]);
-  picked.forEach(k => lines.push(DIRECTOR[k]));
+  if (narr) lines.push('THE PLAYER IS NARRATING (see PLAYERS WHO NARRATE): their passage is canon. Do not retell or paraphrase any of it; pick up where it ends, in their point of view, tense and voice, and mostly show how the world and the other characters respond. Keep it short and leave them room to write the next beat.');
+  else picked.forEach(k => lines.push(DIRECTOR[k]));
   const old = Object.values(a.lore).filter(e => turn - (e.lastSeen ? Math.ceil(e.lastSeen / 2) : 0) > 8);
   if (!short && !calm && old.length && Math.random() < 0.3) { const e = old[Math.floor(Math.random() * old.length)]; lines.push('Callback: bring back "' + e.name + '" (' + (e.desc || e.type) + ') in a natural, meaningful way.'); }
   if (!sim && !calm && a.playCats && a.playCats.length && Math.random() < (short ? 0.4 : 0.6)) lines.push('Gameplay focus for this reply: ' + a.playCats[Math.floor(Math.random() * a.playCats.length)] + '. Shape the main challenge or interaction around it, organically and without naming the category.');
@@ -391,10 +400,10 @@ function directorNotes(a) {
   if (final) lines.push('THIS IS THE FINAL REPLY. Bring the ' + (sim ? 'experience' : 'story') + ' to a definitive, storybook ending that lands the feeling (' + f + ')' + (sim ? ' and lets the player savour what they did' : ', paying off the threads the player actually cared about') + (roaming || happy ? '. The player has been off the plot or happy where they are: end THEIR story, not the roadmap\'s' : '') + '. Do not ask what they do next and do not offer a new hook; end on a closing image.');
   else if (left === 1) lines.push('One reply left after this: start bringing it home. Set up a satisfying payoff for where the player actually is and what they care about.');
   else if (wrap) lines.push('WRAP-UP: the session is nearly over. Start steering toward a payoff and a storybook ending, focused on the feeling. No new threads. If the player wants to meander, let the ending come to them rather than killing the moment with plot.');
-  if (!final) { const ends = calm ? ENDINGS.filter(e => !/interruption|reveal|hook/i.test(e)) : ENDINGS; lines.push(ends[Math.floor(Math.random() * ends.length)]); }
+  if (!final && !narr) { const ends = calm ? ENDINGS.filter(e => !/interruption|reveal|hook/i.test(e)) : ENDINGS; lines.push(ends[Math.floor(Math.random() * ends.length)]); }
   // Humour follows the feeling: how often it is asked for, and which kinds, depend on what the player wants to feel.
   const hum = humourFor(f);
-  if (!final && Math.random() < hum.p * (happy ? 0.6 : 1)) lines.push('Humour this reply: ' + hum.kinds[Math.floor(Math.random() * hum.kinds.length)] + '. Land it in the specifics of this scene and keep it ' + (hum.p < 0.5 ? 'light and warm' : 'sharp') + '; it must serve the feeling, never derail the scene.');
+  if (!final && !narr && Math.random() < hum.p * (happy ? 0.6 : 1)) lines.push('Humour this reply: ' + hum.kinds[Math.floor(Math.random() * hum.kinds.length)] + '. Land it in the specifics of this scene and keep it ' + (hum.p < 0.5 ? 'light and warm' : 'sharp') + '; it must serve the feeling, never derail the scene.');
   else lines.push('No jokes needed this reply unless one arises naturally from a character; let the feeling carry it.');
   const cast = (a.gm && a.gm.cast) || [];
   if (!short && !calm && !wrap && cast.length && Math.random() < 0.75) { const c = cast[Math.floor(Math.random() * cast.length)]; lines.push('Motive in action: ' + c.name + ' wants ' + c.wants + ' and fears ' + c.fears + '. Show them pursuing it visibly in this reply (a choice, a lie, a favour, a closed door), even where it cuts against what the player wants.'); }
