@@ -77,6 +77,10 @@
           <div class="row"><select id="setNotesModel" style="width:100%"><option value="story">Story model (richer twists)</option><option value="cheap">Cheap model (default; saves credits)</option></select></div>
         </div>
         <div class="grp">
+          <b>SET-UP WIZARD</b>
+          <label><input type="checkbox" id="setPhoto" style="width:auto"> Offer "Paint the world from a photo" when you build a world yourself (off by default)</label>
+        </div>
+        <div class="grp">
           <b>MEMORY &amp; PROMPT SIZE</b>
           <p class="tag">Trade cost against continuity.</p>
           <label>Recent turns sent verbatim (transcript entries; 2 per exchange)</label>
@@ -288,7 +292,7 @@
     <label><input type="checkbox" id="romNone" style="width:auto"> No romance this time</label>
   </div>
   <div id="curPick" style="display:none">
-    <button class="big" id="pickBuild">&#10022; Build the world myself<small>Start from a blank slate: the feeling you want, how you want to play, an optional photo to paint the world from, then a few questions with suggestions tailored to you.</small></button>
+    <button class="big" id="pickBuild">&#10022; Build the world myself<small>Start from a blank slate: the feeling you want, how you want to play<span id="pickBuildPhoto">, an optional photo to paint the world from</span>, then a few questions with suggestions tailored to you.</small></button>
     <div id="curPresets"><div class="tag" style="margin:14px 0 6px">CURATED EXPERIENCES</div><div id="presetChips"></div></div>
   </div>
   <form autocomplete="off" onsubmit="return false"><textarea id="curA" name="answer" placeholder="Type your own answer, or tap options above..." autocomplete="off"></textarea></form>

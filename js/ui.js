@@ -243,7 +243,7 @@ function loadSettings() {
   $('setEffort').value = S().effort === undefined ? 'low' : S().effort;
   $('setTuneRecent').value = tune('recent'); $('setTuneChapters').value = tune('chapters'); $('setTuneRecall').value = tune('recall');
   $('setNotesModel').value = S().notesModel || 'cheap'; $('setTtsChunk').value = ['one', 'two', '2000', '700'].includes(String(S().ttsChunk)) ? String(S().ttsChunk) : '2000'; $('setPrices').value = S().prices || GEMINI.prices;
-  $('setKey').value = S().key || ''; $('setFake').checked = !!S().fake; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setCleanDict').checked = S().cleanDict !== false;
+  $('setKey').value = S().key || ''; $('setFake').checked = !!S().fake; $('setNoEmbed').checked = !!S().noEmbed; $('setSpeak').checked = !!S().speak; $('setCleanDict').checked = S().cleanDict !== false; $('setPhoto').checked = !!S().photoUpload;
   $('setAmbient').value = S().ambient || ''; $('setRate').value = S().rate || 1; $('setEngine').value = S().ttsEngine || 'gemini'; $('setTtsStyle').value = S().ttsStyle || DEFAULT_TTS_STYLE;
   const me = S().me || {}; $('setMeName').value = me.name || ''; $('setMeLast').value = me.last || ''; $('setMeGender').value = me.gender || ''; $('setMeInterest').value = me.interest || ''; $('setMeBorn').value = me.born || '';
   fillModels(); loadTtsVoice();
@@ -266,7 +266,7 @@ $('impFile').onchange = async e => {
 function collectSettings() {   // the browser voice is saved by its own handler (only when you pick one)
   return { effort: $('setEffort').value, effortV: 3, notesV: 2, ttsV: 1, voiceV: 3, ttsChunkV: 3, welcomed: true, tune_recent: +$('setTuneRecent').value, tune_chapters: +$('setTuneChapters').value, tune_recall: +$('setTuneRecall').value,
     notesModel: $('setNotesModel').value, ttsChunk: $('setTtsChunk').value, prices: $('setPrices').value.trim() || GEMINI.prices, key: $('setKey').value.trim(), model: $('setModel').value.trim(), cheap: $('setCheap').value.trim(), fake: $('setFake').checked,
-    embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, ambient: $('setAmbient').value,
+    embed: $('setEmbed').value.trim(), noEmbed: $('setNoEmbed').checked, speak: $('setSpeak').checked, cleanDict: $('setCleanDict').checked, photoUpload: $('setPhoto').checked, ambient: $('setAmbient').value,
     me: { name: $('setMeName').value.trim(), last: $('setMeLast').value.trim(), gender: $('setMeGender').value.trim(), interest: $('setMeInterest').value.trim(), born: +$('setMeBorn').value || 0 },
     rate: +$('setRate').value, ttsEngine: $('setEngine').value, ttsVoice: ttsVoiceValue(), ttsModel: $('setTtsModel').value.trim(), ttsStyle: $('setTtsStyle').value.trim() };
 }
