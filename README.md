@@ -4,6 +4,8 @@
 
 A no-build, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
 
+Curious how it works under the hood? See the flow charts in [How the Phonodeck Works](https://phonodeck.vercel.app/how-it-works.html).
+
 <!-- Add a screenshot here: ![Phonodeck](screenshot.png) -->
 
 ## Features
