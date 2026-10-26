@@ -106,7 +106,7 @@ function guestMe() {
 function curQs() {   // the list depends on the experience you pick and the play mode (and a new story with the same cast skips the world questions)
   const sim = simPick(), head = [QBY.time].concat(cur.askVoice ? [VOICE_Q] : [], guest() ? [] : [ME_Q]);
   if (cur.src) return head.concat([QBY.feeling, QBY.mode, LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid]);
-  return head.concat([PICK_Q], buildPick() ? [QBY.feeling, QBY.mode, QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id]), !minorPick() && romanceHinted() ? [ROMANCE_Q] : []) : []);
+  return head.concat([PICK_Q], buildPick() ? [QBY.feeling, QBY.mode].concat(S().photoUpload ? [QBY.photo] : [], (sim ? SIM_IDS : STORY_IDS).map(id => QBY[id]), !minorPick() && romanceHinted() ? [ROMANCE_Q] : []) : []);
 }
 // Adventures made before answers had ids stored them by position.
 const OLD_IDS = ['world', 'vibe', 'who', 'traits', 'where', 'hook', 'allies', 'threat', 'play', 'avoid', 'length', 'romance'];
@@ -207,6 +207,7 @@ function presetDrop() { const p = cur.preset; if (!p) return; ['feeling', ...PRE
 function presetRender(q) {
   $('curPresets').style.display = q.pick && !kidPick() ? '' : 'none';   // children build their own world (the curated ones are for adults)
   $('pickBuild').classList.toggle('primary', !!q.pick && buildPick());
+  $('pickBuildPhoto').style.display = S().photoUpload ? '' : 'none';   // the photo step is off unless Settings > Story turns it on
   $('presetChips').innerHTML = PRESETS.map(p => '<button class="xp' + (cur.preset === p ? ' sel' : '') + '" data-p="' + p.id + '">' + esc(p.label) + '<small>' + esc(p.feeling) + '</small></button>').join('');
 }
 $('presetChips').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRESETS.find(p => p.id === b.dataset.p);
