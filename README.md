@@ -41,6 +41,8 @@ No key yet? Choose **Try the offline demo** to look around with a fake Game Mast
 - **Locally:** from the folder, run `python3 -m http.server 8080` and open `http://localhost:8080/`. (Opening the file directly works, but browsers then re-ask for microphone permission every time.)
 
 ### Where things live
+For a picture of how it all fits together, see [How the Phonodeck Works](https://phonodeck.vercel.app/how-it-works.html) (`how-it-works.html`).
+
 No build step: `index.html` is the page, and it loads plain scripts in order, all sharing one global scope.
 - `js/prompts.js`: every instruction the models receive (Game Master, architect, showrunner, director, memory, photo, report card). Tune the storytelling here.
 - `js/experiences.js`: the curated experiences in the set-up. Add an object to `PRESETS` to add one.
