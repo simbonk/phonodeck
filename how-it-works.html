@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Flow charts of how the Phonodeck builds a world, plays a turn from your voice to the narrator's, and remembers across stories.">
+<title>How the Phonodeck Works</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Antonio:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column, each figure full width with its own sideways scroll on phones. */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --fg:#18202c; --fg2:#566173; --line:#9aa5b6;
+  --accent:#c4650a; --accent-bg:#fdf1e4;
+  --m:#5b45c9; --m-bg:#efecfc; --s:#0d7a6c; --s-bg:#e5f5f2;
+  --display:"Antonio","Arial Narrow",sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1118; --panel:#151b25; --fg:#e4e9f1; --fg2:#9ba7b9; --line:#4b5668;
+  --accent:#ffab4a; --accent-bg:#2c2014; --m:#a99bff; --m-bg:#211d3a; --s:#4fd1bd; --s-bg:#122b28; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1118; --panel:#151b25; --fg:#e4e9f1; --fg2:#9ba7b9; --line:#4b5668;
+  --accent:#ffab4a; --accent-bg:#2c2014; --m:#a99bff; --m-bg:#211d3a; --s:#4fd1bd; --s-bg:#122b28; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 var(--body);padding-inline:16px;padding-block:32px 56px}
+main{max-width:1040px;margin:0 auto;display:grid;gap:40px}
+header{display:grid;gap:10px;max-width:68ch}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(40px,7vw,64px)/1 var(--display);letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font:500 28px/1.1 var(--display);letter-spacing:.02em;margin:0;text-wrap:balance}
+h2 .n{color:var(--accent);margin-right:10px}
+p{margin:0;max-width:68ch}
+.lede{color:var(--fg2);font-size:17px}
+section{display:grid;gap:14px}
+figure{margin:0;display:grid;gap:10px}
+figcaption{color:var(--fg2);font-size:14px;max-width:72ch}
+.scroll{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+svg{display:block;width:100%;height:auto;color:var(--fg2);font-family:var(--body)}
+.b{stroke-width:1.4}
+.b.n{fill:var(--panel);stroke:var(--line)}
+.b.p{fill:var(--accent-bg);stroke:var(--accent);stroke-width:2}
+.b.m{fill:var(--m-bg);stroke:var(--m)}
+.b.s{fill:var(--s-bg);stroke:var(--s)}
+.b.c{fill:var(--s-bg);stroke:var(--s);stroke-dasharray:5 4}
+.tt{font-size:14px;font-weight:600;fill:var(--fg)}
+.ts{font-size:11.5px;fill:var(--fg2)}
+.tg{font:500 9.5px var(--mono);letter-spacing:.1em;fill:var(--fg2)}
+.al{font-size:11.5px;fill:var(--fg2);font-style:italic;paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.a{fill:none;stroke:var(--fg2);stroke-width:1.5}
+.ahp{fill:var(--fg2)}
+.br{fill:none;stroke:var(--s);stroke-width:2}
+.bus{fill:none;stroke:var(--line);stroke-width:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:13px;color:var(--fg2)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:22px;height:14px;border-radius:3px;border:1.5px solid}
+.sw.p{background:var(--accent-bg);border-color:var(--accent);border-width:2px}
+.sw.m{background:var(--m-bg);border-color:var(--m)}
+.sw.s{background:var(--s-bg);border-color:var(--s)}
+.sw.n{background:var(--panel);border-color:var(--line)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tablewrap{overflow-x:auto}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg2)}
+td:first-child{font-weight:600;white-space:nowrap}
+code{font:500 13px var(--mono)}
+ul{margin:0;padding-left:20px;max-width:68ch;display:grid;gap:6px}
+.eyebrow a{color:inherit}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow"><a href="/">Phonodeck</a> · as of 26 October 2026</div>
+  <h1>How the Phonodeck Works</h1>
+  <p class="lede">From the set-up questions to the report card: how a world gets built, what happens between your words and the narrator's voice, and how the phonodeck remembers, even across stories with the same cast.</p>
+  <div class="legend" aria-label="Legend">
+    <span><i class="sw p"></i>You</span>
+    <span><i class="sw m"></i>A call to a Gemini model</span>
+    <span><i class="sw s"></i>Saved memory</span>
+    <span><i class="sw n"></i>Code in your browser</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="n">1</span>The big picture</h2>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 1000 300" role="img" aria-label="Set-up answers go to the Architect, which builds the world; play reads and updates the world each turn until the clock runs out; the report card follows, and Same cast feeds the old world back to the Architect." style="min-width:720px">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahp"/></marker></defs>
+<rect class="b p" x="20" y="60" width="175" height="110" rx="10"/>
+<text class="tg" x="107.5" y="77" text-anchor="middle">YOU</text>
+<text class="tt" x="107.5" y="96" text-anchor="middle">You set it up</text>
+<text class="ts" x="107.5" y="113" text-anchor="middle">how long, the feeling</text>
+<text class="ts" x="107.5" y="128" text-anchor="middle">story or experience</text>
+<text class="ts" x="107.5" y="143" text-anchor="middle">preset, questions</text>
+<text class="ts" x="107.5" y="158" text-anchor="middle">or a photo</text>
+<rect class="b m" x="20" y="212" width="175" height="66" rx="6"/>
+<text class="tg" x="107.5" y="229" text-anchor="middle">GEMINI PRO</text>
+<text class="tt" x="107.5" y="248" text-anchor="middle">Photo reader</text>
+<text class="ts" x="107.5" y="265" text-anchor="middle">paints place, era, people</text>
+<rect class="b m" x="245" y="60" width="180" height="110" rx="6"/>
+<text class="tg" x="335.0" y="77" text-anchor="middle">GEMINI PRO</text>
+<text class="tt" x="335.0" y="96" text-anchor="middle">The Architect</text>
+<text class="ts" x="335.0" y="113" text-anchor="middle">builds the whole world</text>
+<text class="ts" x="335.0" y="128" text-anchor="middle">streamed, so the build</text>
+<text class="ts" x="335.0" y="143" text-anchor="middle">screen follows along</text>
+<rect class="b s" x="475" y="60" width="195" height="110" rx="6"/>
+<text class="tg" x="572.5" y="77" text-anchor="middle">SAVED IN YOUR BROWSER</text>
+<text class="tt" x="572.5" y="96" text-anchor="middle">The world</text>
+<text class="ts" x="572.5" y="113" text-anchor="middle">story bible · lore · cast</text>
+<text class="ts" x="572.5" y="128" text-anchor="middle">secret roadmap</text>
+<text class="ts" x="572.5" y="143" text-anchor="middle">GM secrets · map</text>
+<rect class="b n" x="720" y="60" width="120" height="110" rx="6"/>
+<text class="tg" x="780.0" y="77" text-anchor="middle">THE LOOP</text>
+<text class="tt" x="780.0" y="96" text-anchor="middle">Play</text>
+<text class="ts" x="780.0" y="113" text-anchor="middle">turn after turn,</text>
+<text class="ts" x="780.0" y="128" text-anchor="middle">timed by the</text>
+<text class="ts" x="780.0" y="143" text-anchor="middle">clock</text>
+<rect class="b m" x="870" y="60" width="115" height="110" rx="6"/>
+<text class="tg" x="927.5" y="77" text-anchor="middle">GEMINI PRO</text>
+<text class="tt" x="927.5" y="96" text-anchor="middle">Report card</text>
+<text class="ts" x="927.5" y="113" text-anchor="middle">two grades:</text>
+<text class="ts" x="927.5" y="128" text-anchor="middle">the phonodeck</text>
+<text class="ts" x="927.5" y="143" text-anchor="middle">and you</text>
+<rect class="b p" x="690" y="212" width="295" height="66" rx="10"/>
+<text class="tg" x="837.5" y="229" text-anchor="middle">YOU</text>
+<text class="tt" x="837.5" y="248" text-anchor="middle">Same cast, new story</text>
+<text class="ts" x="837.5" y="265" text-anchor="middle">sequel · years later · fresh start · prequel</text>
+<path class="a " d="M107,212 V174" marker-end="url(#ah)"/>
+<text class="al" x="112" y="198" text-anchor="start">fills the answers</text>
+<path class="a " d="M195,115 H241" marker-end="url(#ah)"/>
+<text class="al" x="218" y="107" text-anchor="middle">answers</text>
+<path class="a " d="M425,115 H471" marker-end="url(#ah)"/>
+<text class="al" x="448" y="107" text-anchor="middle">world</text>
+<path class="a " d="M670,95 H716" marker-end="url(#ah)"/>
+<text class="al" x="693" y="87" text-anchor="middle">read</text>
+<path class="a " d="M720,140 H674" marker-end="url(#ah)"/>
+<text class="al" x="697" y="158" text-anchor="middle">memory</text>
+<path class="a " d="M840,115 H866" marker-end="url(#ah)"/>
+<text class="al" x="853" y="50" text-anchor="middle">time is up</text>
+<path class="a " d="M927,170 V208" marker-end="url(#ah)"/>
+<text class="al" x="934" y="194" text-anchor="start">loved it?</text>
+<path class="a " d="M690,245 H335 V174" marker-end="url(#ah)"/>
+<text class="al" x="515" y="238" text-anchor="middle">brings back the bible, lore, agendas and how it ended</text></svg></div>
+    <figcaption>The Architect turns your answers into a whole world in one streamed call. Play then reads that world on every turn and writes back to it after every turn. When the clock says no replies are left, the final scene lands and the report card is written. Same cast hands the finished world back to the Architect for a new story. Invited guests skip the About you step: their name and gender come from the invite, unless they have set their own in Personal details.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="n">2</span>One turn, from your voice to the narrator's</h2>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 1000 590" role="img" aria-label="One turn: your speech becomes text, is cleaned up, and joins a cached system message and a per-turn briefing; Gemini Pro writes the reply, which is read aloud. Afterwards a cheap memory pass updates the lore and mood that shape the next turn, and housekeeping refreshes the bible every 10 turns." style="min-width:720px">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahp"/></marker></defs>
+<rect class="b p" x="20" y="40" width="140" height="80" rx="10"/>
+<text class="tg" x="90.0" y="57" text-anchor="middle">YOU</text>
+<text class="tt" x="90.0" y="76" text-anchor="middle">You speak</text>
+<text class="ts" x="90.0" y="93" text-anchor="middle">or type</text>
+<rect class="b n" x="190" y="40" width="150" height="80" rx="6"/>
+<text class="tg" x="265.0" y="57" text-anchor="middle">BROWSER</text>
+<text class="tt" x="265.0" y="76" text-anchor="middle">Speech to text</text>
+<text class="ts" x="265.0" y="93" text-anchor="middle">the browser listens</text>
+<text class="ts" x="265.0" y="108" text-anchor="middle">&quot;make it so&quot; sends</text>
+<rect class="b m" x="370" y="40" width="150" height="80" rx="6"/>
+<text class="tg" x="445.0" y="57" text-anchor="middle">GEMINI FLASH</text>
+<text class="tt" x="445.0" y="76" text-anchor="middle">Dictation cleanup</text>
+<text class="ts" x="445.0" y="93" text-anchor="middle">fixes misheard names</text>
+<text class="ts" x="445.0" y="108" text-anchor="middle">gives up after 5s</text>
+<rect class="b n" x="550" y="40" width="150" height="80" rx="6"/>
+<text class="tg" x="625.0" y="57" text-anchor="middle">IN THE APP</text>
+<text class="tt" x="625.0" y="76" text-anchor="middle">Build the prompt</text>
+<text class="ts" x="625.0" y="93" text-anchor="middle">two parts, below</text>
+<rect class="b m" x="730" y="40" width="120" height="80" rx="6"/>
+<text class="tg" x="790.0" y="57" text-anchor="middle">GEMINI PRO</text>
+<text class="tt" x="790.0" y="76" text-anchor="middle">Game Master</text>
+<text class="ts" x="790.0" y="93" text-anchor="middle">writes the reply</text>
+<text class="ts" x="790.0" y="108" text-anchor="middle">streamed</text>
+<rect class="b n" x="875" y="40" width="110" height="80" rx="6"/>
+<text class="tg" x="930.0" y="57" text-anchor="middle">GEMINI VOICE</text>
+<text class="tt" x="930.0" y="76" text-anchor="middle">Narrator</text>
+<text class="ts" x="930.0" y="93" text-anchor="middle">reads it aloud,</text>
+<text class="ts" x="930.0" y="108" text-anchor="middle">a sentence at a time</text>
+<path class="a " d="M160,80 H186" marker-end="url(#ah)"/>
+<path class="a " d="M340,80 H366" marker-end="url(#ah)"/>
+<path class="a " d="M520,80 H546" marker-end="url(#ah)"/>
+<path class="a " d="M700,80 H726" marker-end="url(#ah)"/>
+<path class="a " d="M850,80 H871" marker-end="url(#ah)"/>
+<path class="a " d="M930,40 V16 H90 V36" marker-end="url(#ah)"/>
+<text class="al" x="510" y="12" text-anchor="middle">the mic reopens when the narrator finishes</text>
+<rect class="b s" x="190" y="180" width="260" height="150" rx="6"/>
+<text class="tg" x="202" y="197" text-anchor="start">SYSTEM MESSAGE</text>
+<text class="tt" x="202" y="216" text-anchor="start">Same every turn (cached)</text>
+<text class="ts" x="202" y="233" text-anchor="start">rules: age, cast size, play mode</text>
+<text class="ts" x="202" y="248" text-anchor="start">the feeling to achieve</text>
+<text class="ts" x="202" y="263" text-anchor="start">story bible</text>
+<text class="ts" x="202" y="278" text-anchor="start">facts you edited by hand</text>
+<text class="ts" x="202" y="293" text-anchor="start">chapter summaries</text>
+<text class="ts" x="202" y="308" text-anchor="start">GM secrets and cast agendas</text>
+<rect class="b s" x="480" y="180" width="240" height="150" rx="6"/>
+<text class="tg" x="492" y="197" text-anchor="start">BRIEFING</text>
+<text class="tt" x="492" y="216" text-anchor="start">This turn only</text>
+<text class="ts" x="492" y="233" text-anchor="start">mission map and time left</text>
+<text class="ts" x="492" y="248" text-anchor="start">relevant memories</text>
+<text class="ts" x="492" y="263" text-anchor="start">director: pacing, humour, mood</text>
+<text class="ts" x="492" y="278" text-anchor="start">strangers’ hidden names</text>
+<text class="ts" x="492" y="293" text-anchor="start">your recent edits</text>
+<text class="ts" x="492" y="308" text-anchor="start">then your words</text>
+<rect class="b n" x="790" y="180" width="195" height="150" rx="6"/>
+<text class="tg" x="887.5" y="197" text-anchor="middle">IN THE APP</text>
+<text class="tt" x="887.5" y="216" text-anchor="middle">Recall</text>
+<text class="ts" x="887.5" y="233" text-anchor="middle">searches lore, older</text>
+<text class="ts" x="887.5" y="248" text-anchor="middle">turns, chapters and</text>
+<text class="ts" x="887.5" y="263" text-anchor="middle">earlier stories</text>
+<text class="ts" x="887.5" y="278" text-anchor="middle">(figure 3)</text>
+<path class="a " d="M320,180 V150 H585 V124" marker-end="url(#ah)"/>
+<text class="al" x="330" y="145" text-anchor="start">plus the recent conversation</text>
+<path class="a " d="M640,180 V124" marker-end="url(#ah)"/>
+<path class="a " d="M790,255 H724" marker-end="url(#ah)"/>
+<text class="al" x="757" y="247" text-anchor="middle">memories</text>
+<rect class="b m" x="20" y="420" width="150" height="150" rx="6"/>
+<text class="tg" x="95.0" y="437" text-anchor="middle">GEMINI FLASH</text>
+<text class="tt" x="95.0" y="456" text-anchor="middle">Housekeeping</text>
+<text class="ts" x="95.0" y="473" text-anchor="middle">every 10 turns,</text>
+<text class="ts" x="95.0" y="488" text-anchor="middle">in the background:</text>
+<text class="ts" x="95.0" y="503" text-anchor="middle">rewrite the bible</text>
+<text class="ts" x="95.0" y="518" text-anchor="middle">revise GM secrets</text>
+<text class="ts" x="95.0" y="533" text-anchor="middle">summarise chapters</text>
+<rect class="b s" x="220" y="420" width="330" height="150" rx="6"/>
+<text class="tg" x="232" y="437" text-anchor="start">SAVED IN YOUR BROWSER</text>
+<text class="tt" x="232" y="456" text-anchor="start">Memory</text>
+<text class="ts" x="232" y="473" text-anchor="start">lore entries (earlier versions kept)</text>
+<text class="ts" x="232" y="488" text-anchor="start">events · location · map of places</text>
+<text class="ts" x="232" y="503" text-anchor="start">story beats or goal progress</text>
+<text class="ts" x="232" y="518" text-anchor="start">mood: how well the feeling lands (0-10)</text>
+<rect class="b m" x="620" y="420" width="270" height="100" rx="6"/>
+<text class="tg" x="755.0" y="437" text-anchor="middle">GEMINI FLASH</text>
+<text class="tt" x="755.0" y="456" text-anchor="middle">Memory pass</text>
+<text class="ts" x="755.0" y="473" text-anchor="middle">runs while you listen: reads your words,</text>
+<text class="ts" x="755.0" y="488" text-anchor="middle">the reply and the lore it mentions,</text>
+<text class="ts" x="755.0" y="503" text-anchor="middle">and updates what changed</text>
+<path class="a " d="M755,120 V416" marker-end="url(#ah)"/>
+<text class="al" x="762" y="395" text-anchor="start">after the reply</text>
+<path class="a " d="M620,470 H554" marker-end="url(#ah)"/>
+<text class="al" x="587" y="462" text-anchor="middle">updates</text>
+<path class="a " d="M500,420 V380 H600 V334" marker-end="url(#ah)"/>
+<text class="al" x="608" y="372" text-anchor="start">next turn</text>
+<path class="a " d="M95,420 V255 H186" marker-end="url(#ah)"/>
+<text class="al" x="100" y="300" text-anchor="start">refreshes</text></svg></div>
+    <figcaption>The prompt is split on purpose. Everything that rarely changes goes in the system message, so Google can bill it as cached input. Only the last message, the briefing plus your words, is new each turn, and it is never stored. The memory pass and housekeeping run in the background and never hold up the next reply; the next turn waits at most two seconds for the memory pass to finish. If you write your turn as story prose instead of a command (a passage about your character, often in the third person), the director drops its own plot moves and jokes, and the Game Master picks up where your passage ends, in your voice and point of view, without retelling it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Recall: finding the right memories</h2>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 1000 360" role="img" aria-label="Recall searches lore, older turns, older chapters and every earlier story in the Same cast chain with both a keyword search and a meaning search, merges the rankings, and puts about 2,600 characters of memories into the briefing." style="min-width:720px">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahp"/></marker></defs>
+<rect class="b s" x="20" y="30" width="270" height="48" rx="6"/>
+<text class="tt" x="155.0" y="52" text-anchor="middle">Lore entries</text>
+<text class="ts" x="155.0" y="69" text-anchor="middle">always kept if your words name them</text>
+<rect class="b s" x="20" y="88" width="270" height="48" rx="6"/>
+<text class="tt" x="155.0" y="110" text-anchor="middle">Older turns</text>
+<text class="ts" x="155.0" y="127" text-anchor="middle">outside the recent window</text>
+<rect class="b s" x="20" y="146" width="270" height="48" rx="6"/>
+<text class="tt" x="155.0" y="168" text-anchor="middle">Older chapter summaries</text>
+<text class="ts" x="155.0" y="185" text-anchor="middle">not already in the prompt</text>
+<rect class="b c" x="20" y="204" width="270" height="48" rx="6"/>
+<text class="tt" x="155.0" y="226" text-anchor="middle">Earlier story (the sequel’s source)</text>
+<text class="ts" x="155.0" y="243" text-anchor="middle">its chapters and turns</text>
+<rect class="b c" x="20" y="262" width="270" height="48" rx="6"/>
+<text class="tt" x="155.0" y="284" text-anchor="middle">The story before that</text>
+<text class="ts" x="155.0" y="301" text-anchor="middle">followed all the way back</text>
+<path class="br" d="M14,204 V316"/>
+<text class="al" x="20" y="342">Same cast chain: skipped for a fresh start or a prequel</text>
+<path class="bus" d="M290,54 H315 M290,112 H315 M290,170 H315 M290,228 H315 M290,286 H315 M315,54 V286"/>
+<rect class="b p" x="360" y="20" width="220" height="58" rx="10"/>
+<text class="tt" x="470.0" y="42" text-anchor="middle">The question</text>
+<text class="ts" x="470.0" y="59" text-anchor="middle">your words + the end of the last reply</text>
+<rect class="b n" x="360" y="118" width="220" height="64" rx="6"/>
+<text class="tt" x="470.0" y="140" text-anchor="middle">Keyword search</text>
+<text class="ts" x="470.0" y="157" text-anchor="middle">top 12 by word match (BM25)</text>
+<rect class="b m" x="360" y="218" width="220" height="64" rx="6"/>
+<text class="tt" x="470.0" y="240" text-anchor="middle">Meaning search</text>
+<text class="ts" x="470.0" y="257" text-anchor="middle">top 12 by embedding similarity</text>
+<text class="ts" x="470.0" y="272" text-anchor="middle">skipped if slower than 1s</text>
+<path class="a " d="M315,150 H356" marker-end="url(#ah)"/>
+<path class="a " d="M315,250 H356" marker-end="url(#ah)"/>
+<path class="a " d="M470,78 V114" marker-end="url(#ah)"/>
+<path class="a " d="M580,49 H610 V200 H540 V214" marker-end="url(#ah)"/>
+<rect class="b n" x="640" y="150" width="170" height="100" rx="6"/>
+<text class="tt" x="725.0" y="172" text-anchor="middle">Merge</text>
+<text class="ts" x="725.0" y="189" text-anchor="middle">rank both lists together</text>
+<text class="ts" x="725.0" y="204" text-anchor="middle">named lore goes first</text>
+<text class="ts" x="725.0" y="219" text-anchor="middle">old turns cut to their</text>
+<text class="ts" x="725.0" y="234" text-anchor="middle">best sentence or two</text>
+<path class="a " d="M580,150 H636" marker-end="url(#ah)"/>
+<path class="a " d="M580,250 H636" marker-end="url(#ah)"/>
+<rect class="b s" x="850" y="150" width="135" height="100" rx="6"/>
+<text class="tt" x="917.5" y="172" text-anchor="middle">Relevant memories</text>
+<text class="ts" x="917.5" y="189" text-anchor="middle">about 2,600</text>
+<text class="ts" x="917.5" y="204" text-anchor="middle">characters, into</text>
+<text class="ts" x="917.5" y="219" text-anchor="middle">the briefing</text>
+<path class="a " d="M810,200 H846" marker-end="url(#ah)"/></svg></div>
+    <figcaption>Two searches run side by side and their rankings are merged. Lore named in your words is always included first. With Same cast, each story remembers which one it continues, and recall follows that link all the way back, so asking about something from three stories ago can still find it. Earlier stories use the meaning vectors saved while they were played, so nothing new is paid for. Their lore needs no search, because it was copied into the new story when it was created.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="n">4</span>Lore that keeps living</h2>
+  <ul>
+    <li>Every lore entry has a stable id. When the memory pass sees an entry change in play (a relationship, a secret revealed), it rewrites the description and keeps the last four versions in the World tab.</li>
+    <li>A stranger is stored under their real name but shown only by their role ("the old man") until the story says the name. Then the same entry is revealed, with no duplicate.</li>
+    <li>An entry you edit by hand is pinned into every prompt as a player-set fact (up to 30, newest first) and wins over earlier narration and recalled memories. The memory pass still adds what happens to it in play, but never changes the name, type or role you wrote, and your own words travel alongside the updated description so later rewrites cannot wear your correction away. An edit you make while the memory pass is running is kept.</li>
+    <li>Undo restores the transcript and all of this memory to how it was before the turn.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Which model does what</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Model</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td>Gemini Pro</td><td>The Game Master's replies, the Architect, the photo reader and the report card. Thinking effort is Low by default.</td></tr>
+      <tr><td>Gemini Flash</td><td>The memory pass, dictation cleanup, bible rewrites, GM secrets, chapter summaries and set-up suggestions. Falls back to Pro if Flash is out of quota.</td></tr>
+      <tr><td>Gemini embedding</td><td>Meaning search in recall. Vectors are made in the background and saved with the story.</td></tr>
+      <tr><td>Gemini voice (TTS)</td><td>The narrator. The device's own voice takes over if Gemini's voice is unavailable or out of quota.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede" style="font-size:14px">Everything runs in the browser with your own key. The only server is the optional invite proxy, which forwards a guest's calls with the host's key and counts what each costs.</p>
+</section>
+</main>
+
+</body>
+</html>
