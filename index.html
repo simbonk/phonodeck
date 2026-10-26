@@ -212,18 +212,13 @@
 <div id="welcome" class="overlay"><div class="box">
   <h1>WELCOME TO THE PHONODECK</h1>
   <p>The Phonodeck is an interactive text-to-speech story maker. The goal is to make the stories feel as real as possible: exactly like a narrator is reading you a good book that you can control.</p>
-  <div class="whyBox"></div>
-  <p>Setup should take a minute.</p>
   <h3>BEFORE YOU START</h3>
   <ol>
     <li><b>Use Chrome, Edge or Safari.</b> Firefox can't turn speech into text, so hands-free talking won't work there.</li>
     <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
     <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
-    <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works.</li>
   </ol>
   <p class="warn" id="wNoVoice" style="display:none"><b>This browser can't listen.</b> Hands-free talking needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>: Firefox can't turn speech into text. The phonodeck is at its best when you talk to it, so please open this page in one of those browsers. You can still type if you prefer.</p>
-  <button class="big" id="wMic">Test the microphone<small>Allow it, then say something like "Hello, phonodeck"</small></button>
-  <p class="tag" id="wMicStatus"></p>
   <h3>YOUR GEMINI KEY</h3>
   <ol><li>Get a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a> and set up billing for it (a small prepaid balance works).</li><li>Paste it below.</li><li>Press Start.</li></ol>
   <div class="row"><input id="wKey" type="password" placeholder="Paste your API key" autocomplete="off"></div>
@@ -250,18 +245,13 @@
   <h1>WELCOME TO THE PHONODECK</h1>
   <p id="gwHello">You have been invited to play.</p>
   <p>The Phonodeck is an interactive text-to-speech story maker. The goal is to make the stories feel as real as possible: exactly like a narrator is reading you a good book that you can control.</p>
-  <div class="whyBox"></div>
-  <p>Setup should take a minute.</p>
   <h3>BEFORE YOU START</h3>
   <ol>
     <li><b>Use Chrome, Edge or Safari.</b> Firefox can't turn speech into text, so hands-free talking won't work there.</li>
     <li><b>Turn your sound on.</b> A narrator reads the story aloud, so turn the volume up. On an iPhone or iPad, also make sure Silent Mode is off (in Control Center, the bell should not be crossed out).</li>
     <li><b>Try hands-free.</b> Tap <b>&#127911; Hands-free</b> next to Send, then just talk. When you have finished, say <b>"make it so"</b> and the phonodeck answers.</li>
-    <li><b>Test the microphone.</b> Allow it when your browser asks, then say a few words. If the words appear here, hands-free works.</li>
   </ol>
   <p class="warn" id="gwNoVoice" style="display:none"><b>This browser can't listen.</b> Hands-free talking needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>: Firefox can't turn speech into text. The phonodeck is at its best when you talk to it, so please open the invite link you were sent in one of those browsers. You can still type here if you prefer.</p>
-  <button class="big" id="gwMic">Test the microphone<small>Allow it, then say something like "Hello, phonodeck"</small></button>
-  <p class="tag" id="gwMicStatus"></p>
   <button class="big primary" id="gwStart">Start<small>A few quick questions, then your story begins</small></button>
   <p class="tag" id="gwLeft"></p>
 </div></div>
@@ -335,8 +325,12 @@
   <div id="admMain" style="display:none">
     <div class="grp">
       <b>ADD SOMEONE</b>
-      <label>Name</label>
+      <label>Invite name (for your list)</label>
       <div class="row"><input id="admName" placeholder="e.g. Mom" autocomplete="off"></div>
+      <label>Their name in the story (optional: left empty, the story goes without one)</label>
+      <div class="row"><input id="admPlayer" placeholder="e.g. Jane Smith" autocomplete="off"></div>
+      <label>Their gender (optional)</label>
+      <div class="row"><input id="admGender" placeholder="In your own words, e.g. a woman" autocomplete="off"></div>
       <label>Allowance in dollars (about 10 cents buys a minute of play, so $3 is roughly 30 minutes)</label>
       <div class="row"><input id="admAllow" type="number" min="0.5" step="0.5" value="3"></div>
       <button class="primary" id="admCreate">Create invite</button>

@@ -337,60 +337,16 @@ $('wSkip').onclick = closeWelcome;
 // ---------------- Invited guest: welcome screen ----------------
 function guestWelcomeText() {
   const i = inviteInfo; if (!i) return;
-  if (i.name) $('gwHello').textContent = 'Hi ' + i.name + ', you have been invited to play.';
+  if (i.player || i.name) $('gwHello').textContent = 'Hi ' + (i.player || i.name).split(/\s+/)[0] + ', you have been invited to play.';
   $('gwLeft').textContent = i.status !== 'active' ? INVITE_OFF_MSG : i.ceiling ? CEILING_MSG : i.minutesLeft > 0 ? 'Your invite has about ' + i.minutesLeft + ' minutes of play.' : QUOTA_MSG;
 }
-// The "Why" on both welcome screens, in Simon's own words.
-const WHY_HTML = '<details class="why"><summary>Why</summary>' +
-  '<p>Anxious about the future, so I built the one I want to see.</p>' +
-  '<p>I leaned in with Claude Code to build a proto holodeck. LLMs can arguably pass the Turing test now, so I figured why not push them to tell a good story? ' +
-  'I think before we get crazy into graphics, we should focus on the elements that make a good story.</p>' +
-  '<p>Cue <b>The Phonodeck</b>: a text-to-speech lucid dream.</p><ul>' +
-  '<li><b>It\'s totally open source!</b> Feel free to <a href="https://github.com/simbonk/phonodeck" target="_blank" rel="noopener" style="color:var(--accent)">peek under the covers</a>. It\'s basically a bunch of LLMs strung together with the Gemini API to narrate a story, with director and game master models that hover in the background and try to hook you.</li>' +
-  '<li><b>Your data stays with you.</b> Everything lives locally in your browser, RAG style. As the story balloons, it keeps you in the bubble without getting bogged down in context. I\'m not scraping any data: that\'s not the goal.</li>' +
-  '<li><b>Hands-free mode!</b> Close your eyes, talk, and say "make it so" to send your thoughts. When I chat by voice elsewhere it cuts my thoughts off, and this works much better.</li></ul>' +
-  '<p>This runs pretty hot (probably a bit ahead of its time commercially, and it could definitely use more eyeballs to help optimize). I\'m up for ideas, and curious to see where this craziness goes. My North Star is Star Trek: The Next Generation, so I\'ll lean that way.</p>' +
-  '<p>Second star to the right, and straight on till morning!</p></details>';
-document.querySelectorAll('.whyBox').forEach(el => el.innerHTML = WHY_HTML);
-
-// Both welcome screens (w: first run, gw: invited guest) let you test the microphone before you start.
-const MIC_UI = { w: { where: 'this page' }, gw: { where: 'the invite link you were sent', start: 'gwStart', go: 'Start' } };
+// Both welcome screens (w: first run, gw: invited guest) warn up front when this browser cannot listen.
 function voiceCheck(p) {   // hands-free needs the browser's speech recognition (Firefox has none): say so before they get going
-  const ok = !!SR, u = MIC_UI[p]; $(p + 'NoVoice').style.display = ok ? 'none' : ''; $(p + 'Mic').style.display = ok ? '' : 'none';
-  if (u.start) { $(u.start).classList.toggle('primary', ok); $(u.start).firstChild.textContent = ok ? u.go : 'Continue by typing'; }
+  const ok = !!SR; $(p + 'NoVoice').style.display = ok ? 'none' : '';
+  if (p === 'gw') { $('gwStart').classList.toggle('primary', ok); $('gwStart').firstChild.textContent = ok ? 'Start' : 'Continue by typing'; }
 }
-// Allowing the microphone is not enough: some browsers have speech recognition that never returns words (Firefox, Brave, some Linux builds),
-// so listen for a few seconds and show what was heard.
-const VOICE_FAIL = where => 'This browser could not turn your speech into words. Hands-free needs <b>Chrome</b>, <b>Edge</b> or <b>Safari</b>, so please open ' + where + ' in one of those. You can still type here if you prefer.';
-function voiceFailed(p, why) {
-  const u = MIC_UI[p]; $(p + 'MicStatus').textContent = why || '';
-  $(p + 'NoVoice').innerHTML = VOICE_FAIL(u.where); $(p + 'NoVoice').style.display = '';
-  if (u.start) { $(u.start).classList.remove('primary'); $(u.start).firstChild.textContent = 'Continue by typing'; }
-}
-async function micTest(p) {
-  const st = $(p + 'MicStatus'), btn = $(p + 'Mic');
-  if (!SR) return voiceFailed(p);
-  try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); m.getTracks().forEach(t => t.stop()); }
-  catch (e) { st.textContent = 'The microphone was not allowed (' + e.name + '). Allow it in your browser\'s settings for this site (the icon left of the address), then test again. You can still type.'; return; }
-  let r; try { r = new SR(); } catch (e) { return voiceFailed(p); }
-  r.lang = navigator.language || 'en-US'; r.interimResults = true; r.continuous = false;
-  let heard = '', failed = '', done = false;
-  const finish = () => { if (done) return; done = true; clearTimeout(timer); try { r.abort(); } catch (e) {} btn.disabled = false; btn.firstChild.textContent = 'Test again';
-    if (heard) { st.innerHTML = 'Heard: <b>"' + esc(heard) + '"</b>. Hands-free works, you are all set.'; voiceCheck(p); }
-    else if (failed === 'no-speech' || !failed) st.textContent = 'I did not hear anything. Check the microphone is not muted, then test again and speak up.';
-    else if (failed === 'not-allowed' || failed === 'service-not-allowed' || failed === 'network' || failed === 'language-not-supported') voiceFailed(p, 'Speech-to-text did not work here (' + failed + ').');
-    else st.textContent = 'The test did not finish (' + failed + '). Try again.'; };
-  r.onresult = e => { heard = [...e.results].map(x => x[0].transcript).join(' ').trim(); st.innerHTML = 'Hearing: <i>' + esc(heard) + '</i>'; };
-  r.onerror = e => { failed = e.error || 'error'; };
-  r.onend = () => setTimeout(finish, 50);
-  const timer = setTimeout(finish, 9000);
-  btn.disabled = true; btn.firstChild.textContent = 'Listening... say something';
-  st.textContent = 'Listening. Say "Hello, phonodeck".';
-  try { r.start(); } catch (e) { failed = 'start'; finish(); }
-}
-$('wMic').onclick = () => micTest('w');
-$('gwMic').onclick = () => micTest('gw');
-$('gwStart').onclick = () => {
+$('gwStart').onclick = async () => {
+  if (!inviteInfo) await loadInvite();   // the invite carries the guest's name and gender for the story
   db.settings.guestWelcomed = db.settings.welcomed = true; db.settings.speak = true; persist();
   $('guestWelcome').classList.remove('on');
   if (!Object.keys(db.adventures).length) $('newExpBtn').click();
@@ -409,8 +365,9 @@ const money = n => '$' + (+n).toFixed(2);
 function admRender(o) {
   $('admLogin').style.display = 'none'; $('admMain').style.display = '';
   const full = o.month >= o.ceiling;   // the monthly ceiling stops every invite, whatever its own allowance says
+  const who = i => [i.player, i.gender].filter(Boolean).join(', ');
   $('admList').innerHTML = !o.invites.length ? '<p class="tag">No invites yet.</p>' : '<table class="adm"><tr><th>Name</th><th>Allowance</th><th>Used</th><th>Left</th><th>Last played</th><th>Status</th><th></th></tr>' +
-    o.invites.map(i => '<tr><td><b>' + esc(i.name) + '</b><br><span class="tag">' + esc(i.code) + '</span></td><td>' + money(i.allow) + '</td><td>' + money(i.spent) + '<br><span class="tag">' + i.minutesPlayed + ' min</span></td>' +
+    o.invites.map(i => '<tr><td><b>' + esc(i.name) + '</b>' + (who(i) ? '<br>' + esc(who(i)) : '') + '<br><span class="tag">' + esc(i.code) + '</span></td><td>' + money(i.allow) + '</td><td>' + money(i.spent) + '<br><span class="tag">' + i.minutesPlayed + ' min</span></td>' +
       '<td>about ' + i.minutesLeft + ' min</td><td>' + (i.last ? new Date(i.last).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '-') + '</td><td>' + (i.status !== 'active' ? 'Paused' : full ? '<b class="warn">Stopped</b><br><span class="tag">monthly ceiling</span>' : 'Active') + '</td>' +
       '<td><button data-act="copy" data-code="' + esc(i.code) + '">Copy link</button><button data-act="add" data-code="' + esc(i.code) + '">Add more</button>' +
       '<button data-act="' + (i.status === 'active' ? 'pause' : 'resume') + '" data-code="' + esc(i.code) + '">' + (i.status === 'active' ? 'Pause' : 'Resume') + '</button><button data-act="delete" data-code="' + esc(i.code) + '" data-name="' + esc(i.name) + '">Delete</button></td></tr>').join('') + '</table>';
@@ -430,9 +387,9 @@ function copyLink(c) {
 $('admGo').onclick = () => { admPw = $('admPass').value; try { sessionStorage.setItem('holodeck.admin', admPw); } catch (e) {} admRun('list'); };
 $('admPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('admGo').click(); });
 $('admCreate').onclick = () => {
-  const name = $('admName').value.trim(), allow = +$('admAllow').value;
+  const name = $('admName').value.trim(), allow = +$('admAllow').value, player = $('admPlayer').value.trim(), gender = $('admGender').value.trim();
   if (!name || !(allow > 0)) { $('admMsg').textContent = 'Type a name and an allowance first.'; return; }
-  admRun('create', { name, allow }, o => { $('admName').value = '';
+  admRun('create', { name, allow, player, gender }, o => { $('admName').value = $('admPlayer').value = $('admGender').value = '';
     $('admLink').innerHTML = '<p>Link for ' + esc(name) + ': <code>' + esc(inviteLink(o.created)) + '</code> <button data-act="copy" data-code="' + esc(o.created) + '">Copy</button></p>'; });
 };
 $('admin').addEventListener('click', e => {

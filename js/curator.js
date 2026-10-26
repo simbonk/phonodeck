@@ -93,10 +93,17 @@ const NOPREF = '(no preference: you decide, surprise me)';
 const isNoPref = s => /^\(no preference/i.test(String(s || ''));
 let cur = { i: 0, answers: {}, extra: {}, rounds: {} };
 function newCur(extra) {   // askVoice is fixed when the wizard opens, so saving the voice part-way through does not renumber the questions
-  return Object.assign({ i: 0, answers: mePrefill(), extra: {}, rounds: {}, askVoice: voiceStepDue() }, extra);
+  return Object.assign({ i: 0, answers: guest() ? guestMe() : mePrefill(), extra: {}, rounds: {}, askVoice: voiceStepDue() }, extra);
+}
+// Invited guests skip "About you": the name and gender come from the invite (set on the admin page), or stay blank.
+function guestMe() {
+  const i = inviteInfo || {}, out = {};
+  if (i.player) out.name = i.player;
+  if (i.gender) out.gender = i.gender;
+  return out;
 }
 function curQs() {   // the list depends on the experience you pick and the play mode (and a new story with the same cast skips the world questions)
-  const sim = simPick(), head = [QBY.time].concat(cur.askVoice ? [VOICE_Q] : [], [ME_Q]);
+  const sim = simPick(), head = [QBY.time].concat(cur.askVoice ? [VOICE_Q] : [], guest() ? [] : [ME_Q]);
   if (cur.src) return head.concat([QBY.feeling, QBY.mode, LINK_Q, sim ? QBY.goal : QBY.hook, WHO2_Q], sim ? [] : [QBY.vibe, QBY.play], [QBY.avoid]);
   return head.concat([PICK_Q], buildPick() ? [QBY.feeling, QBY.mode, QBY.photo].concat((sim ? SIM_IDS : STORY_IDS).map(id => QBY[id]), !minorPick() && romanceHinted() ? [ROMANCE_Q] : []) : []);
 }
@@ -298,11 +305,12 @@ async function readPhoto() {   // returns false if it failed (you stay on the ph
 async function curAdvance() {
   const qs = curQs();
   if (cur.i < qs.length - 1) { cur.i++; curRender(); return; }
-  const answers = qs.flatMap(q => q.voice ? []
+  const meAnswers = () => [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }, { id: 'gender', q: 'Your gender', a: cur.answers.gender }].filter(x => x.a);
+  const answers = (qs.includes(ME_Q) ? [] : meAnswers()).concat(qs.flatMap(q => q.voice ? []
     : q.pick ? [{ id: 'describe', q: cur.preset ? 'What you are looking for (a curated experience, possibly edited by the player: where it differs from the details below, this wins)' : 'What you are looking for', a: cur.answers.describe }].filter(x => x.a)
-    : q.me ? [{ id: 'name', q: 'Your name', a: cur.answers.name }, { id: 'age', q: 'Your age', a: cur.answers.age }, { id: 'gender', q: 'Your gender', a: cur.answers.gender }].filter(x => x.a)
+    : q.me ? meAnswers()
     : q.id === 'romance' ? [{ id: 'romance', q: 'Romance', a: noRomance(cur.answers.romance) ? '' : cur.answers.romance }].filter(x => x.a)
-    : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]);
+    : [{ id: q.id, q: q.q, a: cur.answers[q.id] || '(no preference)' }]));
   if (cur.preset) { ['feeling', 'mode', ...PRESET_IDS].forEach(id => { if (cur.answers[id] && !answers.some(x => x.id === id)) answers.push({ id, q: QBY[id].q, a: cur.answers[id] }); });
     if (cur.preset.beats) answers.push({ id: 'beats', q: 'Story beats for the Game Master (a guide for a good series of events; keep them secret from the player)', a: cur.preset.beats }); }
   { const me = Object.assign({}, S().me), nm = cur.answers.name, age = +cur.answers.age; let ch = false;   // remember your name and age for next time (never overwrites them)

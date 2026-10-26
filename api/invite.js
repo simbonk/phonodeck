@@ -6,5 +6,5 @@ export async function GET(req) {
   const inv = await getInvite(new URL(req.url).searchParams.get('code'));
   if (!inv) { await noteBad(req); return json({ error: 'invite_invalid' }, 403); }
   const s = summary(inv), { month, ceiling } = await monthSpend();
-  return json({ name: s.name, left: s.left, minutesLeft: s.minutesLeft, status: s.status, ceiling: month >= ceiling });   // ceiling: every guest is stopped for the month
+  return json({ name: s.name, player: s.player, gender: s.gender, left: s.left, minutesLeft: s.minutesLeft, status: s.status, ceiling: month >= ceiling });   // ceiling: every guest is stopped for the month
 }

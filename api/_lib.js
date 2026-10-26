@@ -52,11 +52,11 @@ export async function getInvite(code) {
   code = normCode(code); if (!code) return null;
   const [h] = await redis(['HGETALL', 'inv:' + code]); const o = hash(h);
   if (!o.name) return null;
-  return { code, name: o.name, allow: +o.allow || 0, spent: +o.spent || 0, status: o.status || 'active', created: +o.created || 0, last: +o.last || 0, play: +o.play || 0, turnAt: +o.turnAt || 0 };
+  return { code, name: o.name, player: o.player || '', gender: o.gender || '', allow: +o.allow || 0, spent: +o.spent || 0, status: o.status || 'active', created: +o.created || 0, last: +o.last || 0, play: +o.play || 0, turnAt: +o.turnAt || 0 };
 }
 export function summary(inv) {   // what a guest (or the admin page) sees
   const left = Math.max(0, inv.allow - inv.spent), perMin = inv.play >= 300 && inv.spent > 0 ? inv.spent / (inv.play / 60) : DEFAULT_PER_MIN;
-  return { name: inv.name, code: inv.code, allow: inv.allow, spent: +inv.spent.toFixed(4), left: +left.toFixed(4), minutesLeft: Math.floor(left / perMin), minutesPlayed: Math.round(inv.play / 60), status: inv.status, created: inv.created, last: inv.last };
+  return { name: inv.name, player: inv.player, gender: inv.gender, code: inv.code, allow: inv.allow, spent: +inv.spent.toFixed(4), left: +left.toFixed(4), minutesLeft: Math.floor(left / perMin), minutesPlayed: Math.round(inv.play / 60), status: inv.status, created: inv.created, last: inv.last };
 }
 
 // Slows down anyone guessing codes or the admin password: 30 wrong tries an hour per address.

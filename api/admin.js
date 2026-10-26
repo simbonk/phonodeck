@@ -1,5 +1,5 @@
 // POST /api/admin with the header x-admin-password and a JSON body { action, ... }. Every action re-checks the password.
-// Actions: list | create { name, allow } | add { code, amount } | pause { code } | resume { code } | delete { code } | ceiling { amount }
+// Actions: list | create { name, allow, player?, gender? } | add { code, amount } | pause { code } | resume { code } | delete { code } | ceiling { amount }
 import { redis, getInvite, summary, newCode, normCode, monthSpend, tooManyBad, noteBad, same, json, DEFAULT_PER_MIN } from './_lib.js';
 
 export async function POST(req) {
@@ -13,8 +13,9 @@ export async function POST(req) {
   if (b.action === 'create') {
     const name = String(b.name || '').trim().slice(0, 40), allow = money(b.allow);
     if (!name || !allow) return json({ error: 'need_name_and_allowance' }, 400);
+    const player = String(b.player || '').trim().slice(0, 60), gender = String(b.gender || '').trim().slice(0, 40);   // optional: the guest's name and gender in the story
     const c = made = newCode(name);
-    await redis(['HSET', 'inv:' + c, 'name', name, 'allow', allow, 'spent', 0, 'status', 'active', 'created', Date.now()], ['SADD', 'invites', c]);
+    await redis(['HSET', 'inv:' + c, 'name', name, 'allow', allow, 'spent', 0, 'status', 'active', 'created', Date.now(), 'player', player, 'gender', gender], ['SADD', 'invites', c]);
   } else if (['add', 'pause', 'resume', 'delete'].includes(b.action)) {
     if (!await getInvite(code)) return json({ error: 'no_such_invite' }, 404);
     if (b.action === 'add') await redis(['HINCRBYFLOAT', 'inv:' + code, 'allow', money(b.amount)]);
