@@ -93,9 +93,10 @@ const NOPREF = '(no preference: you decide, surprise me)';
 const isNoPref = s => /^\(no preference/i.test(String(s || ''));
 let cur = { i: 0, answers: {}, extra: {}, rounds: {} };
 function newCur(extra) {   // askVoice is fixed when the wizard opens, so saving the voice part-way through does not renumber the questions
-  return Object.assign({ i: 0, answers: guest() ? guestMe() : mePrefill(), extra: {}, rounds: {}, askVoice: voiceStepDue() }, extra);
+  return Object.assign({ i: 0, answers: guest() ? Object.assign(guestMe(), mePrefill()) : mePrefill(), extra: {}, rounds: {}, askVoice: voiceStepDue() }, extra);
 }
 // Invited guests skip "About you": the name and gender come from the invite (set on the admin page), or stay blank.
+// Anything the guest types in Settings > Personal details wins over the invite.
 function guestMe() {
   const i = inviteInfo || {}, out = {};
   if (i.player) out.name = i.player;
