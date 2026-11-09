@@ -26,7 +26,7 @@ Curious how it works under the hood? See the flow charts in [How the Phonodeck W
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
 - **Report card:** two grades from a discerning high school teacher: *How the Phonodeck did* (did it deliver the feeling and your goals?) and *How you did* (your own choices and play).
-- **Hands-free voice:** dictation (say *over to you* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
+- **Hands-free voice:** dictation (say *make it so* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
 - **You stay in control:** edit the Story and World tabs mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
 ## Quick start
