@@ -339,8 +339,8 @@ function stopAmbient() {
   try { m.master.gain.cancelScheduledValues(actx.currentTime); m.master.gain.setValueAtTime(m.master.gain.value, actx.currentTime); m.master.gain.linearRampToValueAtTime(0, actx.currentTime + 1.2); } catch (e) {}
   setTimeout(() => m.nodes.forEach(n => { try { n.stop(); } catch (e) {} }), 1400);
 }
-// Short cues so you can hear (eyes closed) what is happening: 'listen' = your turn to talk, 'ack' = "Make it so" heard (a starship
-// computer's acknowledging chirp), 'sent' = a typed message sent. Each is a list of [frequency, start, length] tones.
+// Short cues so you can hear (eyes closed) what is happening: 'listen' = your turn to talk, 'ack' = the send phrase heard (a bright
+// acknowledging chirp), 'sent' = a typed message sent. Each is a list of [frequency, start, length] tones.
 const CUES = { listen: [[660, 0, 0.35]], sent: [[440, 0, 0.35]], ack: [[1175, 0, 0.07], [1568, 0.085, 0.07], [2093, 0.17, 0.16]] };
 function cueGraph(c, name, t0) {
   CUES[name].forEach(([f, st, len]) => {
@@ -354,12 +354,12 @@ function blip(name) {
   if (IOS) { renderClip('cue-' + name, 0.5, c => cueGraph(c, name, 0)).then(url => { sfxEl.src = url; return sfxEl.play(); }).catch(e => console.warn('cue', e)); return; }
   const c = ensureAudio(); if (c) cueGraph(c, name, c.currentTime);
 }
-// The send phrase is "Make it so" (Captain Picard). It only counts at the very END of what you said, and only after a short pause, so a sentence like "make it so the door opens" does not send. "End dictation" still works as a backup.
-const SEND_PHRASE = 'make it so';
-const END_RE = /(^|\s)(make it so|end (of )?dictation)[.,!?\s]*$/i, hasEnd = s => END_RE.test(s), stripEnd = s => s.replace(END_RE, '').replace(/\s+/g, ' ').trim();
+// The send phrase is "Over to you". It only counts at the very END of what you said, and only after a short pause, so a sentence like "over to you in a minute" does not send. "End dictation" still works as a backup.
+const SEND_PHRASE = 'over to you';
+const END_RE = /(^|\s)(over to you|end (of )?dictation)[.,!?\s]*$/i, hasEnd = s => END_RE.test(s), stripEnd = s => s.replace(END_RE, '').replace(/\s+/g, ' ').trim();
 let endTimer = null;
 // Hands-free: the microphone stays on until you tap the button again. Speech is ignored while the story is being prepared or the narrator is talking
-// (so it never hears itself), and only the words "make it so" send the message. Pauses never send.
+// (so it never hears itself), and only the words "over to you" send the message. Pauses never send.
 let recRun = false, lastMuted = false, voiceErr = '', quietErr = false, recSince = 0, recIdle = 0, recHeard = false;   // recSince: when the current session was started or aborted without ending yet
 const narrating = () => !!activeGemini || (TTS && speechSynthesis.speaking && Date.now() < talkUntil);   // see talkUntil: never stuck "talking"
 const micMuted = () => busy || narrating();

@@ -15,7 +15,7 @@ const QUESTIONS = [
   { id: 'goal', q: 'What do you want to do there?', h: 'Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you are there.', c: ['Explore every corner', 'Spend time with someone special', 'Learn a craft from a local', 'Eat my way through the place', 'Do absolutely nothing', 'Throw a party'],
     ck: ['Explore every corner', 'Make friends with the animals', 'Build something amazing', 'Find all the secret places', 'Have a feast', 'Learn some magic'], ph: 'e.g. Spend an evening in Ten Forward swapping stories with Guinan' },
   { id: 'world', q: 'What kind of world do you want to step into?', h: 'Pick an era or a world you find fascinating. The more specific the time and place, the richer the story.', ph: 'Or name your own, e.g. Ancient Rome in 44 BC, or Tokyo in 2077',
-    c: ['The American Civil War, 1863', 'Star Trek: The Next Generation', 'France during World War II', 'Los Angeles in the 1920s', 'Miami in 1985', 'Victorian London in the 1880s', 'Pirates of the Caribbean, 1715'],
+    c: ['The American Civil War, 1863', 'The Apollo 13 mission, 1970', 'France during World War II', 'Los Angeles in the 1920s', 'Miami in 1985', 'Victorian London in the 1880s', 'Pirates of the Caribbean, 1715'],
     ck: ['Dragons and castles', 'Space adventure', 'Magic school', 'Pirate treasure hunt', 'Dinosaur island', 'Superheroes', 'Underwater kingdom', 'Talking animals', 'A friendly haunted house', 'Jungle explorer', 'Toys come alive'] },
   { id: 'vibe', q: 'What vibe should it have?', h: 'Pick a mood; more than one is fine.', c: ['Gritty', 'Whimsical', 'Epic', 'Cozy', 'Tense', 'Funny', 'Melancholic', 'Romantic', 'Mysterious', 'Wholesome'],
     ck: ['Funny', 'Exciting', 'Magical', 'Cozy', 'Silly', 'Mysterious (not too scary)', 'Brave', 'Wholesome'] },
@@ -493,10 +493,10 @@ async function finishAdventure() {
   if (db.current === name) { renderStory(); showFinale(a); }
 }
 function showFinale(a) {
-  if (a.result && a.result.holodeck) {   // the two-grade report card
+  if (a.result && (a.result.phonodeck || a.result.holodeck)) {   // the two-grade report card (older stories saved the first grade as "holodeck")
     const r = a.result, card = (t, g) => '<h3>' + t + '</h3><div class="card"><span class="grade">' + esc(g.grade || '?') + '</span> <span class="tag">' + esc(g.score != null ? g.score + '/100' : '') + '</span><p>' + esc(g.comment || '') + '</p></div>';
     $('finaleBody').innerHTML = '<div class="tag">ADVENTURE COMPLETE</div><h1>' + esc(r.title || db.current) + '</h1><p>' + esc(r.summary || '') + '</p>' +
-      card('HOW THE PHONODECK DID <span class="tag">(the feeling: ' + esc(feelingOf(a)) + (isSim(a) ? '; your goal: ' + esc(goalOf(a)) : '') + ')</span>', r.holodeck) + card('HOW YOU DID', r.player || {}) +
+      card('HOW THE PHONODECK DID <span class="tag">(the feeling: ' + esc(feelingOf(a)) + (isSim(a) ? '; your goal: ' + esc(goalOf(a)) : '') + ')</span>', r.phonodeck || r.holodeck) + card('HOW YOU DID', r.player || {}) +
       (r.next ? '<h3>NEXT TIME</h3><div class="card"><p>' + esc(r.next) + '</p></div>' : '');
     $('finale').classList.add('on'); return;
   }
