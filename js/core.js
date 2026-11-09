@@ -303,9 +303,9 @@ async function chatStream(messages, onDelta, effortOverride) {   // effortOverri
 }
 function fake(tag, m) {
   const last = String(m[m.length - 1].content).split(/\n(?:THE PLAYER|INSTRUCTION): /).pop();   // just the action, not the private briefing
-  if (tag === 'gm') return '[fake GM] The holodeck hums. You said: "' + last.slice(0, 120) + '". A hooded figure named Captain Mara watches from the Rusty Anchor tavern.';
+  if (tag === 'gm') return '[fake GM] The phonodeck hums. You said: "' + last.slice(0, 120) + '". A hooded figure named Captain Mara watches from the Rusty Anchor tavern.';
   if (tag === 'options') return JSON.stringify({ options: ['Fake option A', 'Fake option B', 'Fake option C', 'Fake option D'] });
-  if (tag === 'final') return JSON.stringify({ title: 'Fake Tale', summary: 'You did things. Things happened.', next: 'Next time, take the fake tale somewhere stranger.', holodeck: { grade: 'B+', score: 88, comment: 'The quiet scenes delivered the feeling; the chase in the middle got in the way.' }, player: { grade: 'B', score: 84, comment: 'You committed to your character, but played it safe at the docks.' } });
+  if (tag === 'final') return JSON.stringify({ title: 'Fake Tale', summary: 'You did things. Things happened.', next: 'Next time, take the fake tale somewhere stranger.', phonodeck: { grade: 'B+', score: 88, comment: 'The quiet scenes delivered the feeling; the chase in the middle got in the way.' }, player: { grade: 'B', score: 84, comment: 'You committed to your character, but played it safe at the docks.' } });
   if (tag === 'extract') return JSON.stringify({ lore: [{ name: 'Captain Mara', type: 'person', aliases: ['Mara'], desc: 'Hooded figure who watches from the tavern.' }, { name: 'Rusty Anchor', type: 'place', aliases: [], desc: 'A dockside tavern.' }],
     events: ['Player met the gaze of Captain Mara.'], location: 'Rusty Anchor', links: [['Rusty Anchor', 'Harbour Pier']], beats: [{ beat: 'Learn what Captain Mara wants', status: 'active' }],
     mood: { feeling: 5 + Math.floor(Math.random() * 5), hooked_on: Math.random() < 0.4 ? 'Captain Mara' : '', meandering: Math.random() < 0.3, leaving_plot: false }, goal_progress: 'Settling in at the tavern.' });

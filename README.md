@@ -1,6 +1,6 @@
 # Phonodeck
 
-*The precursor to the holodeck.*
+*Interactive stories you play with your voice.*
 
 A no-build, AI-run text adventure powered by Google Gemini. Say how much time you have and the feeling you want, pick a curated story or a plot-free experience (or just upload a photo), and a Game Master builds a world just for you, keeps an eye on the clock, lands a real ending, and grades the result with a report card. Play by typing or hands-free by voice.
 
@@ -26,7 +26,7 @@ Curious how it works under the hood? See the flow charts in [How the Phonodeck W
 - **Long-term memory:** story bible, lorebook, chapter summaries and hybrid keyword + semantic recall keep long stories consistent.
 - **A plan behind the curtain:** secret roadmap, hidden GM secrets, and a "director" that varies pacing and flags repeated phrases.
 - **Report card:** two grades from a discerning high school teacher: *How the Phonodeck did* (did it deliver the feeling and your goals?) and *How you did* (your own choices and play).
-- **Hands-free voice:** dictation (say *make it so* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
+- **Hands-free voice:** dictation (say *over to you* to send; the phrase glows while the mic listens), Gemini narrator voice, soft background sound, and automatic cleanup of misheard words.
 - **You stay in control:** edit the Story and World tabs mid-story (your edits win over earlier narration), undo a turn (memory included), watch the cost meter, save adventures as plain JSON files.
 
 ## Quick start

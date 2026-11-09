@@ -52,7 +52,7 @@ function castRules(minutes, names) {
 - When a named character first appears, introduce them as a gifted author would: two or three specific, telling details (how they hold themselves, something about their hands or clothes, what they carry, the sound of their voice) that show who they are. Never an inventory of hair, eyes and height.`;
 }
 
-const GM_RULES = `You are the Game Master of a holodeck: a fully immersive, second-person text adventure that is someone's vacation from reality. It must feel alive, textured and surprising, never flat, robotic or like a questionnaire.
+const GM_RULES = `You are the Game Master of the Phonodeck, an audio storytelling stage: a fully immersive, second-person text adventure that is someone's vacation from reality. It must feel alive, textured and surprising, never flat, robotic or like a questionnaire.
 THE FEELING COMES FIRST
 - The player chose a FEELING TO ACHIEVE (see below and the bible). Delivering that feeling is your main job. Plot, roadmap, cast agendas and the storytelling standards all serve it; when they get in its way, the feeling wins.
 - Follow the player's lead. If they walk away from the plot (leave, escape, change the subject, spend their time with one character), the plot lets them go: threats do not chase them across the galaxy, the nightmare does not follow the shuttle, other characters do not barge in. Plot is an offering, never a pursuer. Offer it again only if the player reaches for it.
@@ -152,7 +152,7 @@ const DEFAULT_TTS_STYLE = 'Narrate like a gifted audiobook reader telling an imm
 
 // The photo is shrunk in the browser (it never needs to be big) and sent once to the story model, which describes the place, the time and the
 // people in rich detail, suggests lore and answers the remaining questions. Only a small thumbnail and the written description are saved.
-const PHOTO_RULES = `A player has uploaded a photo to step into it on a holodeck. Study it closely and turn it into a world. Output ONLY one JSON object:
+const PHOTO_RULES = `A player has uploaded a photo to step into it as an interactive story. Study it closely and turn it into a world. Output ONLY one JSON object:
 {"place":"where this is: be specific if landmarks, signs, language, architecture or landscape make it clear, otherwise a vivid description of the kind of place",
  "era":"when: year or decade (judge from clothing, cars, devices, photo quality), season and time of day",
  "mood":"3-6 words",
@@ -162,7 +162,7 @@ const PHOTO_RULES = `A player has uploaded a photo to step into it on a holodeck
  "answers":{"world":"genre or setting in 1-5 words","where":"where and when it begins, one sentence","who":"who the player probably is here (e.g. the person taking the photo), one sentence","allies":"who is with them","vibe":"1-3 mood words","goal":"something lovely to do here, one sentence","hook":"a gentle reason for a story to start here, one sentence"}}
 Never try to recognise real people from their faces: describe them, and use only names the caption gives. Do not invent private facts about real people beyond what the photo shows. 4-10 lore entries: include a "person" lore entry for EVERY person in the photo (named from the caption where it names them), plus the place and notable objects. No commentary, no markdown fences.`;
 
-const CREATE_RULES = `You are a story architect for an immersive holodeck experience. From the player's questionnaire answers, output ONLY one JSON object:
+const CREATE_RULES = `You are a story architect for an immersive interactive audio story. From the player's questionnaire answers, output ONLY one JSON object:
 {"bible":"markdown one-pager (max 400 words), written to the player as 'you' (give the player character's name once, then call them 'you'): premise, tone, player character (with strengths/flaws), setting, cast, central goal, main threat, style of play. Do NOT include a Player's Wishes section.",
  "location":"name of the opening place","places":["3-5 place names"],"links":[["Place A","Place B"]],
  "beats":[{"beat":"mission step","status":"active|upcoming"}],
@@ -212,7 +212,7 @@ There are exactly two grades. Letter grades must match scores (A+ 97-100, A 93-9
 Output ONLY one JSON object:
 {"title":"a title for the story",
  "summary":"120-180 word past-tense recap of the whole adventure, second person, told like a highlight reel",
- "holodeck":{"grade":"letter grade such as B+","score":0-100,"comment":"3-5 sentences"},
+ "phonodeck":{"grade":"letter grade such as B+","score":0-100,"comment":"3-5 sentences"},
  "player":{"grade":"letter grade","score":0-100,"comment":"3-5 sentences addressed to the player, naming their actual moments"},
  "next":"one irresistible idea for their next adventure, built on something they loved in this one, 1-2 sentences, addressed to the player"}
 No commentary, no markdown fences.`;
