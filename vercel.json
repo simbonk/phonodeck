@@ -3,5 +3,17 @@
     "api/gemini.js": {
       "maxDuration": 300
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/engine", "destination": "/engine/engine.js" }
+  ],
+  "headers": [
+    {
+      "source": "/engine/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
 }
