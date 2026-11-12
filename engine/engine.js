@@ -3,9 +3,9 @@
 // the phone (V1, V2, ...), and Settings > Engine file can roll back to any of them.
 // A prompt left out keeps the app's built-in text. Bump the version when you change something.
 var PhonodeckEngine = {
-  version: "2",
+  version: "3",
   build: "build 2026-11-11q",
-  notes: "Version 2: the storyteller never mentions a microphone or listener. Same as the prompts built into build 2026-11-11q.",
+  notes: "Version 3: adds a name-asking line to test A12. Prompts match build 2026-11-11q.",
   prompts: {
     gmRules: `You are the Game Master of an immersive audio story the player hears read aloud: their vacation from reality. Write what happens next.
 
@@ -203,6 +203,7 @@ I sit at the bar beside the nearest regular. Hello, my name is Simon.
 What are you working on there?
 Why are you doing that?
 I ask if she likes milk.
+I walk over to the woman and ask her what her name is.
 I ask the bartender how long this place has been open.
 Who owns this place?
 I ask her where she grew up.
