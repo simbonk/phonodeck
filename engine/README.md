@@ -11,5 +11,8 @@ JavaScript, with no network or file access.
   (V1, V2, ...), and
   the Engine file screen can roll back to any of them, or to the engine built into the app.
 - Bump `version` whenever you change something.
+- The comment at the top of `engine.js` explains the engine in plain text for a model reading the
+  file (Claude, Gemini, ...): the on-device model, the 4096-token budget, each step of a turn, and
+  what is safe to change. Keep it above the `var PhonodeckEngine` line.
 
 Anyone can host their own engine file and point the app's address at it.
