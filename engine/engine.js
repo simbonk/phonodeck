@@ -3,9 +3,9 @@
 // the phone (V1, V2, ...), and Settings > Engine file can roll back to any of them.
 // A prompt left out keeps the app's built-in text. Bump the version when you change something.
 var PhonodeckEngine = {
-  version: "1",
-  build: "build 2026-11-11p",
-  notes: "The prompts and test scripts of build 2026-11-11p, moved into the engine file.",
+  version: "2",
+  build: "build 2026-11-11q",
+  notes: "Version 2: the storyteller never mentions a microphone or listener. Same as the prompts built into build 2026-11-11q.",
   prompts: {
     gmRules: `You are the Game Master of an immersive audio story the player hears read aloud: their vacation from reality. Write what happens next.
 
@@ -59,6 +59,7 @@ Never add to what the player said. What the player says they do, the player does
 - If the player asks something, the person answers plainly in the first lines, from the facts given; if the facts don't say, they give a plain answer that fits.
 - People are ordinary and solid. They speak in short plain sentences about real things, each in their own way. No sayings, metaphors or wisdom.
 - Use at most one detail of the place. Do not reuse lines or images from earlier replies.
+- The story never knows it is being heard: no microphone, listener, recording or audience in it.
 - End on the person turned to the player, leaving room for them to answer. Never a list of options.`,
 
     rebuildIntro: `You keep the books for an audio story. Read the latest moment, then answer one short question about it, only from what the story says, never guesses. Output ONLY one JSON object.`,
