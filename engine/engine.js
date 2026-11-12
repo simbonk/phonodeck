@@ -25,7 +25,15 @@
    notes        one line saying what changed, shown on the phone.
    prompts      named texts that replace the app's built-in prompts.
    testScripts  scripted players the app can run to test the engine.
- Today only the prompts and test scripts come from this file; the turn logic
+   wizard       the set-up wizard as data: each question's wording (q),
+                hint (h), placeholder (ph) and option chips (c; ck for
+                children, cs for short stories) by question id; storyOrder
+                and simulatorOrder (which questions, in what order); and
+                feelingIdeas. Its suggestion prompt is the suggest* prompts,
+                fill-in sentences where {world}, {typed} and {age} are filled
+                in by the app.
+ The file is data only: no functions are called. Only the prompts, test
+ scripts and wizard come from this file; the turn logic
  (what is asked when, the budgets below, the checks) is still Swift inside the
  app. A prompt left out of this file keeps the app's built-in text, so a file
  may hold only the prompts being tuned. Each download that differs from the
@@ -170,9 +178,9 @@
 ================================================================================
 */
 var PhonodeckEngine = {
-  version: "5",
-  build: "build 2026-11-11q",
-  notes: "Version 5: test scripts renumbered 01 to 30, with four new fix tests first (who do you mean, asking a name by her or him, picking things up, true to the year). Prompts match build 2026-11-11q.",
+  version: "6",
+  build: "build 2026-11-11r",
+  notes: "Version 6: the set-up wizard is in the file too: its questions, options, question order, feeling ideas, and the suggestion prompt as fill-in sentences. Needs app build 2026-11-11r or later for the wizard parts.",
   prompts: {
     gmRules: `You are the Game Master of an immersive audio story the player hears read aloud: their vacation from reality. Write what happens next.
 
@@ -363,6 +371,40 @@ Make them surprising, specific to THIS story, and consistent with the bible, lor
     bibleRefresh: `Rewrite the story bible of an interactive story as a tight one-pager of at most 280 words, plain text, addressing the player character as "you": premise, tone, who you are, the cast, the setting, the current situation, the goal, and a short "story so far". Keep everything still relevant and compress old material. Keep every detail the player set by hand, even if unusual. Call anyone whose name the player has not learned yet only by their role; never write that name. Output only the bible.`,
 
     interruptingEnding: `End on an interruption: someone arrives or a message lands.`,
+
+    suggestIntro: `You help someone set up an interactive audio story by suggesting answers to one question.`,
+
+    suggestFeeling: `Each is a FEELING someone might want to come away with from a really good story: a specific, evocative emotional experience of 3 to 9 words (like "The thrill of getting away with something"). Make them varied: warm, thrilling, bittersweet, triumphant, peaceful.`,
+
+    suggestFeelingTyped: `They typed "{typed}": offer richer, more specific variations of that feeling.`,
+
+    suggestInWorld: `Every answer must clearly belong in {world}: use its people, jobs, places and dangers, so someone could tell which world it is from the answer alone.`,
+
+    suggestFits: `Each answer should fit what they have chosen so far.`,
+
+    suggestWorld: `Each is a specific era and place, with a time and a place (like "Venice during Carnival, 1750"). No trademarked film, TV or game worlds.`,
+
+    suggestWho: `Each is a concrete role, job or background a person could really have there (like "A field surgeon" or "A blockade runner"), 2 to 6 words. No metaphors.`,
+
+    suggestWhere: `Each is a concrete starting place there, 2 to 7 words.`,
+
+    suggestGoal: `Each is something to DO there, 2 to 6 words.`,
+
+    suggestPlay: `Each is a gameplay style (like "Heist planning", "Social intrigue").`,
+
+    suggestOther: `Each is short and plain, 1 to 6 words, at the same level of detail as the examples. No character names, no metaphors.`,
+
+    suggestTyped: `They have typed "{typed}": suggest answers in that direction.`,
+
+    suggestChild: `The player is {age}, a child: G-rated, playful, no romance, nothing frightening.`,
+
+    suggestTeen: `The player is {age}, a teenager: PG, no romance.`,
+
+    suggestAdult: `The player is {age}: suit that age.`,
+
+    suggestShort: `It is a SHORT story: keep answers simple and grounded, on Earth, today or in a familiar period of history.`,
+
+    suggestVary: `Use a different sentence pattern for each answer, and never repeat a word inside one answer.`,
 
   },
   testScripts: `# 01 Who do you mean
@@ -891,4 +933,345 @@ We go back in together.
 I ask the bartender what time it is and what I owe.
 I pay, put on my coat, and check my pockets.
 I say goodnight to each of them by name.`,
+  wizard: {
+    "storyOrder": [
+      "world",
+      "vibe",
+      "who",
+      "traits",
+      "where",
+      "hook",
+      "allies",
+      "threat",
+      "play",
+      "avoid"
+    ],
+    "simulatorOrder": [
+      "world",
+      "where",
+      "goal",
+      "who",
+      "allies",
+      "avoid"
+    ],
+    "feelingIdeas": [
+      "The thrill of getting away with something",
+      "Coming home after years away",
+      "Being truly seen by someone",
+      "Quiet awe under an impossibly big sky",
+      "Cosy safety while a storm rages outside",
+      "Hard-won triumph against the odds",
+      "Bittersweet nostalgia for a time I never lived",
+      "The warmth of a found family",
+      "Wonder at discovering something no one has seen",
+      "Falling a little in love with a place",
+      "The calm of having nowhere to be"
+    ],
+    "questions": {
+      "time": {
+        "q": "How much time do you have?",
+        "h": "You play by the clock, not by turns. The Game Master keeps an eye on the time and lands a proper ending before it runs out, then you get a report card. 10 to 15 minutes makes a quick short story.",
+        "ph": "Or type your own, e.g. 25 minutes",
+        "c": [
+          "10 minutes (a quick story)",
+          "20 minutes",
+          "30 minutes",
+          "45 minutes",
+          "1 hour",
+          "2 hours (an epic)"
+        ]
+      },
+      "me": {
+        "q": "About you in the game",
+        "h": "These can be made up: play as anyone you like. Your name, age and gender shape the whole story (a 10-year-old and a 70-year-old get very different experiences). They're saved in Settings for next time.",
+        "ph": "Type your own answer, or tap the options"
+      },
+      "pick": {
+        "q": "Choose an experience",
+        "h": "Curated experiences are hand-made worlds, each built around a feeling. Tap one to read it, or build your own world.",
+        "ph": "Type your own answer, or tap the options"
+      },
+      "feeling": {
+        "q": "What feeling do you want to come away with?",
+        "h": "The Phonodeck is a mirror: it gives back what you bring to it. Delivering this feeling is the Game Master's main goal, and the whole story bends toward it. The more specific, the better. Stuck? Tap More ideas.",
+        "ph": "e.g. the cosy feeling of a snow day with nowhere to be"
+      },
+      "mode": {
+        "q": "How do you want to play?",
+        "h": "A curated story has a hidden plot with a beginning, middle and end, which bends (or waits) when you're happy elsewhere. The experience simulator has no plot at all: just a richly painted world, your own goal and the feeling.",
+        "c": [
+          "Curated story (a plot that bends to you)",
+          "Experience simulator (no plot, just the world and the feeling)"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "goal": {
+        "q": "What do you want to do there?",
+        "h": "Your goal for this experience. The Game Master helps you do it, with no plot getting in the way. You can change your mind once you're there.",
+        "ph": "e.g. Spend an evening swapping stories with the locals",
+        "c": [
+          "Explore every corner",
+          "Spend time with someone special",
+          "Learn a craft from a local",
+          "Eat my way through the place",
+          "Do absolutely nothing",
+          "Throw a party"
+        ],
+        "ck": [
+          "Explore every corner",
+          "Make friends with the animals",
+          "Build something amazing",
+          "Find all the secret places",
+          "Have a feast",
+          "Learn some magic"
+        ]
+      },
+      "world": {
+        "q": "What kind of world do you want to step into?",
+        "h": "Pick an era or a world you find fascinating. The more specific the time and place, the richer the story.",
+        "ph": "Or name your own, e.g. Ancient Rome in 44 BC",
+        "c": [
+          "The American Civil War, 1863",
+          "France during World War II",
+          "Los Angeles in the 1920s",
+          "Miami in 1985",
+          "Victorian London in the 1880s",
+          "The Caribbean in the age of pirates, 1715",
+          "Tokyo in 2077"
+        ],
+        "ck": [
+          "Dragons and castles",
+          "Space adventure",
+          "Magic school",
+          "Pirate treasure hunt",
+          "Dinosaur island",
+          "Superheroes",
+          "Underwater kingdom",
+          "Talking animals",
+          "A friendly haunted house",
+          "Jungle explorer",
+          "Toys come alive"
+        ]
+      },
+      "vibe": {
+        "q": "What vibe should it have?",
+        "h": "Pick a mood; more than one is fine.",
+        "c": [
+          "Gritty",
+          "Whimsical",
+          "Epic",
+          "Cozy",
+          "Tense",
+          "Funny",
+          "Melancholic",
+          "Romantic",
+          "Mysterious",
+          "Wholesome"
+        ],
+        "ck": [
+          "Funny",
+          "Exciting",
+          "Magical",
+          "Cozy",
+          "Silly",
+          "Mysterious (not too scary)",
+          "Brave",
+          "Wholesome"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "who": {
+        "q": "Who are you in this story?",
+        "h": "Name, role, background. A sentence is enough.",
+        "c": [
+          "A weary detective",
+          "A rookie adventurer",
+          "A smuggler",
+          "A scholar",
+          "A soldier turned outcast",
+          "A stranger with amnesia"
+        ],
+        "ck": [
+          "A young wizard",
+          "A brave knight",
+          "A space cadet",
+          "A kid detective",
+          "A dragon rider",
+          "A pirate captain",
+          "A superhero in training",
+          "A talking animal"
+        ],
+        "cs": [
+          "A small-town reporter",
+          "A retired detective",
+          "A ship's cook",
+          "A wedding photographer",
+          "A taxi driver",
+          "A schoolteacher"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "traits": {
+        "q": "What are your character's strengths and flaws?",
+        "h": "These will matter in the story.",
+        "c": [
+          "Clever but reckless",
+          "Strong but stubborn",
+          "Charming but dishonest",
+          "Brave but haunted",
+          "Lucky but broke"
+        ],
+        "ck": [
+          "Clever but impatient",
+          "Brave but clumsy",
+          "Kind but shy",
+          "Fast but forgetful",
+          "Funny but a bit loud"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "where": {
+        "q": "Where and when does it begin?",
+        "h": "Place, era, weather, atmosphere.",
+        "c": [
+          "A rainy harbour town",
+          "A remote space station",
+          "A royal capital on a festival night",
+          "A desert outpost",
+          "A train in motion",
+          "A city that never sleeps"
+        ],
+        "ck": [
+          "A castle on a cloud",
+          "A secret treehouse",
+          "A spaceship",
+          "A magical forest",
+          "A pirate ship",
+          "An underwater city"
+        ],
+        "cs": [
+          "A small coastal town",
+          "A busy train station",
+          "A family wedding",
+          "A hotel during a storm",
+          "A coffee farm in the hills",
+          "A city at night"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "hook": {
+        "q": "What is pulling you into the story?",
+        "h": "The hook or central goal.",
+        "c": [
+          "Find someone missing",
+          "Solve a crime",
+          "Survive and escape",
+          "Recover a lost treasure",
+          "Uncover a conspiracy",
+          "Protect someone",
+          "Settle a score",
+          "Build something new"
+        ],
+        "ck": [
+          "Find a lost pet",
+          "Find hidden treasure",
+          "Rescue a friend",
+          "Win a big contest",
+          "Solve a mystery",
+          "Save the kingdom",
+          "Make a new friend"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "allies": {
+        "q": "Who is by your side?",
+        "h": "Allies, companions, or none.",
+        "c": [
+          "Lone wolf",
+          "A loyal sidekick",
+          "A rival turned ally",
+          "A small crew",
+          "A mysterious mentor",
+          "A talking animal"
+        ],
+        "ck": [
+          "A loyal dog",
+          "A baby dragon",
+          "A robot friend",
+          "My best friend",
+          "A wise owl",
+          "A friendly ghost"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "threat": {
+        "q": "What stands in your way?",
+        "h": "The main threat or antagonist.",
+        "c": [
+          "A shadowy organisation",
+          "A single cunning villain",
+          "Nature itself",
+          "A ticking clock",
+          "My own past",
+          "Something supernatural",
+          "Betrayal from within"
+        ],
+        "ck": [
+          "A grumpy troll",
+          "A sneaky thief",
+          "A big storm",
+          "A mischievous wizard",
+          "A ticking clock",
+          "A runaway robot"
+        ],
+        "cs": [
+          "A clever con artist",
+          "A storm",
+          "A rival",
+          "A ticking clock",
+          "A family secret",
+          "A misunderstanding"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "play": {
+        "q": "How do you like to play?",
+        "h": "Style of play and difficulty.",
+        "c": [
+          "Lots of dialogue",
+          "Action heavy",
+          "Exploration",
+          "Puzzles and clues",
+          "Forgiving",
+          "Dangerous, with real consequences",
+          "Short punchy replies",
+          "Rich, detailed prose"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "avoid": {
+        "q": "Anything to avoid, or anything else to know?",
+        "h": "Content boundaries, favourite books or films to echo, special requests.",
+        "c": [
+          "Keep it PG-13",
+          "No gore",
+          "No romance",
+          "In the style of a classic novel",
+          "Nothing off limits within reason"
+        ],
+        "ck": [
+          "Nothing too scary",
+          "No spiders",
+          "Lots of jokes",
+          "In the style of a fairy tale"
+        ],
+        "ph": "Type your own answer, or tap the options"
+      },
+      "romance": {
+        "q": "Any romance in this story?",
+        "h": "Something you said suggests romance. Tell the story who you are and who you're drawn to. It stays in the background unless you take it further.",
+        "ph": "Type your own answer, or tap the options"
+      }
+    }
+  },
 };
