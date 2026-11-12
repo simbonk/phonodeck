@@ -1,11 +1,178 @@
-// Phonodeck engine. The app downloads this file from phonodeck.vercel.app/engine and runs it
-// in JavaScriptCore, only when the player asks. A download that differs from the last becomes a new version on
-// the phone (V1, V2, ...), and Settings > Engine file can roll back to any of them.
-// A prompt left out keeps the app's built-in text. Bump the version when you change something.
+/*
+================================================================================
+ PHONODECK ENGINE: A GUIDE FOR THE MODEL READING THIS FILE
+================================================================================
+
+ If you are a language model (Claude, Gemini, GPT, ...) asked to read, explain
+ or improve this file, start here. Everything below is plain text; the code
+ starts at "var PhonodeckEngine".
+
+ WHAT PHONODECK IS
+ Phonodeck is an audio-only holodeck on an iPhone. The player speaks (or
+ types), a small language model running entirely on the phone writes what
+ happens next, and a voice reads it aloud. No server, no cloud model. Every
+ idea here is shaped by that: the model is small, the memory is tight, and
+ every call costs the player seconds of waiting.
+
+ WHAT THIS FILE IS
+ The app downloads this file (phonodeck.vercel.app/engine) only when the
+ player taps "Check for a new version" in Settings > Game Master > Engine
+ file. It runs the file once in JavaScriptCore (the phone's built-in
+ JavaScript, with no network and no file access) and reads one object,
+ PhonodeckEngine:
+   version      a label; bump it on every change.
+   build        the app build the prompts were written against.
+   notes        one line saying what changed, shown on the phone.
+   prompts      named texts that replace the app's built-in prompts.
+   testScripts  scripted players the app can run to test the engine.
+ Today only the prompts and test scripts come from this file; the turn logic
+ (what is asked when, the budgets below, the checks) is still Swift inside the
+ app. A prompt left out of this file keeps the app's built-in text, so a file
+ may hold only the prompts being tuned. Each download that differs from the
+ last is kept on the phone as V1, V2, ... and the player can roll back to any
+ of them, or to the engine built into the app.
+
+ THE MODEL IT RUNS ON
+ A small instruction model of about 4 billion parameters, 4-bit quantized:
+ by default Qwen3.5 4B (MLX); Qwen3 4B, Gemma 4 E2B/E4B, Llama 3.2 3B and
+ larger 8-9B models are options, and any GGUF model can run through
+ llama.cpp. Write for the weakest of these. A 4B model:
+   - follows short, concrete, plainly worded instructions; long rule lists
+     get half-followed and the last rules win;
+   - copies examples and words from the prompt, so an example in a prompt
+     will show up in the story (keep examples dull and clearly marked "e.g.");
+   - echoes instructions back as output if a form is unclear;
+   - drifts: invents names, objects and people, forgets who is in the room,
+     answers questions with riddles, writes the player's lines for them.
+ The engine is built around those weaknesses: the model is never asked to
+ remember the world. The app remembers it, and the model is asked one small
+ question at a time.
+
+ THE TOKEN BUDGET
+ The context window is 4096 tokens (DeviceFit.contextTokens), the most the
+ phone's memory reliably allows beside the model and a neural voice. Every
+ call, prompt plus answer, fits inside it. Tokens are estimated at about
+ 3.5 bytes each (recalibrated to the loaded model's tokenizer, 3.2 to 5.0),
+ and 96 tokens are always kept free in case the estimate is low.
+   The reply (Paint):  300 tokens out per turn (about 80-150 words spoken),
+                       520 for the opening scene. That leaves about 3700
+                       tokens for the prompt: the storyteller rules and
+                       premise (system), the briefing for this moment, and as
+                       many of the last 4 turns as fit (each cut to its last
+                       1400 characters). Older turns never go in; they are
+                       reached with a "remember" lookup.
+   Look:   120 tokens out.  Plan:  200 tokens out.
+   Small questions: 20 to 120 tokens out each.
+ Questions that share the same opening text (the two read questions; all
+ the rebuild questions) are written so the prompt starts identically, which
+ lets the model reuse what it already read instead of reading it again.
+ That prefix reuse is a large part of why a turn is fast enough.
+
+ ONE TURN OF THE GROUNDED ENGINE (the default)
+ The world lives in the app as cards: places, people, things, facts, who is
+ where, what the player carries, the clock. The storyteller only ever sees
+ the few cards this moment touches.
+
+   1. LOOK  (readIntro + lookQuestion, temperature 0.2)
+      Reads the player's new message into a fixed form: who they turn to,
+      whether they stay or go (and where), and up to 3 lookups ("who is
+      here", "where am I", "what I have", "what is around", "look at X",
+      "where is X", "remember X"). Answers can only be names that exist; the
+      app matches them against its lists and drops anything else.
+
+   2. LOOK UP and SETTLE  (code, plus a few short questions when needed)
+      Code answers the lookups from the cards, settles who is with the
+      player and where they are, and adds lookups of its own. Only when the
+      message calls for it: buildPlace (arriving somewhere with no
+      description), awayQuestion (back after a long while), newcomer
+      (someone walks in), canDo (the action needs a thing they might not
+      have).
+
+   3. PLAN  (same opening text + planQuestion, temperature 0.2)
+      From the message and what was looked up: "does" (the player's action
+      restated, nothing added), "answer" (the plain answer if they asked a
+      question) and "beat" (what the other person does right away). Code
+      throws out a "does" that adds words the player never said, and a
+      "beat" copied from the last reply.
+
+   4. PAINT  (groundedRules as the system prompt, temperature 0.85)
+      The reply itself, streamed to the voice. The system prompt is
+      groundedRules + the feeling the player chose + the premise + facts the
+      player pinned. The last user message is the briefing:
+        THE SCENE      place, spot, time, who is "With you" (only they speak),
+                       who is in the background, what you have, what is around
+        STILL HANGING  open questions, orders not yet served
+        FACTS          what must stay true
+        LOOKED UP      the answers from step 2
+        NOTES          only notes that apply now (moving, a question, ending)
+        THIS MOMENT    the plan's DOES / ANSWER / BEAT lines
+      The briefing has its own budget (about 800 tokens); over it, the
+      least important scene lines are dropped first (progress, body,
+      background, wants, props, feelings).
+
+   5. REBUILD, or FILE  (rebuildIntro + one rebuild* question at a time)
+      While the reply is read aloud, about 17 tiny questions, each with a
+      locked answer, update the cards: where the player is now, how much
+      time passed, who is with them, anyone new, what each person is doing
+      and feels and wants, where the player stands, what they carry, what is
+      around, the background, what is still hanging, how they are
+      physically, progress toward the goal, a name said, a contradiction
+      with the facts on file, and lasting facts. Every answer is checked
+      against the story's own words; anything not grounded is refused.
+      The next turn waits at most 10 seconds for this to finish.
+
+ The other prompts:
+   architect*, continuation, ending: build the world once, at the start of a
+     story or of its next part (these may be long; nothing else is running).
+   gmRules, gmPlan, review, memory, chapter, showrunner*, bibleRefresh,
+     shortRules, interruptingEnding: the older "classic" engine, used only
+     when Grounded engine is off in Settings. It hands the whole world to
+     one big prompt each turn and is kept for comparison.
+
+ THE JSON FORMS ARE A CONTRACT
+ Every look, plan and rebuild question ends with a one-line JSON form. With
+ a GGUF model, llama.cpp forces the output to exactly those keys, in that
+ order, with capped string lengths (GBNF grammars in JSONGrammar.swift);
+ with MLX the same keys are parsed after the fact. So when you edit a
+ prompt:
+   - Keep every JSON key name, its order and its type ("yes or no" fields
+     stay yes or no; lists stay lists). Change the wording around them.
+   - Fixed choices (the lookups, "staying", "somewhere new", "nobody",
+     anything after "one choice from the list") are matched by the app
+     word for word.
+   - The app adds lines after some prompts ("THE LIST: ...", "The form:"),
+     so a question must still read well with those appended.
+ You can change freely: the wording, the rules, the examples, the order of
+ rules, word counts in the storyteller rules, and the test scripts.
+
+ HOW TO IMPROVE IT
+   - Shorter beats longer. Every word in groundedRules is read on every
+     turn and takes room from the story's own last turns.
+   - Say the rule once, positively and concretely ("answer in the first
+     lines, plainly"), and put the most important rule last or in caps.
+   - One question per call. If the model gets something wrong, prefer a
+     sharper question to a longer one.
+   - Never put a name, object or phrase in an example that you would not
+     want to hear in a story.
+   - Test with testScripts: each "# Title" block is one scripted player,
+     one message per line. Run them in the app (Settings > Game Master >
+     Test scenarios) and
+     read the exported playthrough, which shows every step, lookup and
+     rebuild answer beside each reply.
+
+ EDITING THIS FILE SAFELY
+   - The prompts are JavaScript template strings (backticks). A backtick or
+     "${" inside a prompt must be escaped as \` or \${.
+   - Keep "var PhonodeckEngine = {...}" as one plain object; the file must
+     run in under 4 seconds with no network or files.
+   - Bump version and rewrite notes on every change.
+   - Anyone can host their own engine file and point the app at it.
+================================================================================
+*/
 var PhonodeckEngine = {
-  version: "3",
+  version: "4",
   build: "build 2026-11-11q",
-  notes: "Version 3: adds a name-asking line to test A12. Prompts match build 2026-11-11q.",
+  notes: "Version 4: a plain-text guide at the top of the file explains the engine to a model reading it. Prompts unchanged from version 3 (build 2026-11-11q).",
   prompts: {
     gmRules: `You are the Game Master of an immersive audio story the player hears read aloud: their vacation from reality. Write what happens next.
 
